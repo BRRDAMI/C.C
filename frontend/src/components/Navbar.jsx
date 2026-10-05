@@ -31,7 +31,7 @@ const Navbar = () => {
                 <button
                   key={l}
                   onClick={() => navigate(l === "Orders" ? "/orders" : "/")}
-                  className="text-sm font-medium text-gray-200 hover:text-primary transition-colors"
+                  className="text-[15px] font-medium text-gray-100 hover:text-primary transition-colors"
                 >
                   {l}
                 </button>
@@ -81,21 +81,28 @@ const Navbar = () => {
         </div>
 
         {/* Trustpilot bar */}
-        <div className="hidden md:flex items-center justify-center gap-3 pb-3 text-sm text-gray-300">
+        <a
+          href="https://www.trustpilot.com/review/adurite.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden md:flex items-center justify-center gap-3 pb-3 text-[15px] text-gray-300 hover:opacity-90 transition-opacity"
+        >
           <span>Our customers say</span>
-          <span className="flex gap-0.5">
+          <span className="flex gap-[3px]">
             {[0, 1, 2, 3, 4].map((i) => (
-              <span key={i} className="bg-[#00b67a] w-5 h-5 flex items-center justify-center rounded-[3px]">
-                <Star size={12} className="fill-white text-white" />
+              <span key={i} className="bg-[#7a3236] w-6 h-6 flex items-center justify-center rounded-[2px]">
+                <Star size={16} className="fill-white text-white" strokeWidth={0} />
               </span>
             ))}
           </span>
-          <span className="font-semibold text-white">4.2 out of 5</span>
-          <span className="text-gray-400">based on 1204 reviews</span>
-          <span className="flex items-center gap-1 font-semibold text-white">
-            <Star size={14} className="fill-[#00b67a] text-[#00b67a]" /> Trustpilot
+          <span className="text-white">4.2 out of 5 based on 1204 reviews</span>
+          <span className="flex items-center gap-1.5 text-white">
+            <svg width="16" height="16" viewBox="0 0 24 24" className="text-[#00b67a]" fill="currentColor">
+              <path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7L12 17.8 5.7 21.5l1.7-7L2 9.8l7.1-.6z" />
+            </svg>
+            <span className="font-semibold">Trustpilot</span>
           </span>
-        </div>
+        </a>
       </div>
 
       {open && (
