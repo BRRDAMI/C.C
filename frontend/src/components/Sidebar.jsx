@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import {
   ChevronRight, ChevronUp, Tag, ArrowUpDown, Gem, RotateCcw,
-  Skull, Gamepad2, Crosshair, Hammer,
+  Skull, Bot, Crosshair, Pickaxe,
 } from "lucide-react";
 import { markets, paymentOptions, tagOptions } from "../data/mock";
 
-const marketIcon = { limiteds: Skull, toycodes: Gamepad2, cs2: Crosshair, rust: Hammer };
+const marketIcon = { limiteds: Skull, toycodes: Bot, cs2: Crosshair, rust: Pickaxe };
 export const PRICE_MAX = 10000;
 
 const Section = ({ icon: Icon, title, open, setOpen, children }) => (
