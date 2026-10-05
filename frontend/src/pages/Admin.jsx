@@ -1,0 +1,229 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  LogOut, Plus, Trash2, Package, ShoppingBag, CreditCard, Pencil, X,
+} from "lucide-react";
+import {
+  isAdminAuthed, setAdminAuthed, getAdminItems, saveAdminItem, deleteAdminItem,
+  getOrders, getPaymentMethods, savePaymentMethods, money,
+} from "../data/store";
+import { categories } from "../data/mock";
+
+const emptyItem = { name: "", category: "hat", rap: "", price: "", image: "", trending: true };
+
+const Admin = () => {
+  const navigate = useNavigate();
+  const [authed, setAuthed] = useState(isAdminAuthed());
+  const [user, setUser] = useState("");
+  const [pass, setPass] = useState("");
+  const [err, setErr] = useState("");
+  const [tab, setTab] = useState("items");
+
+  const login = (e) => {
+    e.preventDefault();
+    // Mock auth for the frontend phase (backend will validate real credentials).
+    if (user && pass) { setAdminAuthed(true); setAuthed(true); setErr(""); }
+    else setErr("Enter username and password.");
+  };
+
+  if (!authed) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <form onSubmit={login} className="w-full max-w-sm rounded-2xl border border-border bg-[#101014] p-8">
+          <div className="font-display font-extrabold text-2xl text-white lowercase mb-1">adurite <span className="text-primary">admin</span></div>
+          <p className="text-sm text-gray-400 mb-6">Sign in to manage the marketplace.</p>
+          <input value={user} onChange={(e) => setUser(e.target.value)} placeholder="Username" className="w-full bg-[#0b0b0e] border border-border rounded-lg px-4 h-12 text-sm text-white mb-3 focus:border-primary outline-none" />
+          <input value={pass} onChange={(e) => setPass(e.target.value)} type="password" placeholder="Password" className="w-full bg-[#0b0b0e] border border-border rounded-lg px-4 h-12 text-sm text-white mb-4 focus:border-primary outline-none" />
+          {err && <div className="text-xs text-primary mb-3">{err}</div>}
+          <button className="w-full bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg h-12">Log In</button>
+          <button type="button" onClick={() => navigate("/")} className="w-full text-xs text-gray-500 mt-4 hover:text-gray-300">← Back to site</button>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-[#0b0b0e]">
+        <div className="max-w-[1200px] mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
+          <div className="font-display font-extrabold text-xl text-white lowercase">adurite <span className="text-primary">admin</span></div>
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate("/")} className="text-sm text-gray-300 hover:text-white">View Site</button>
+            <button onClick={() => { setAdminAuthed(false); setAuthed(false); }} className="flex items-center gap-2 text-sm text-gray-300 hover:text-primary"><LogOut size={16} /> Logout</button>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-[1200px] mx-auto px-4 lg:px-8 py-8">
+        <div className="flex gap-2 mb-8">
+          {[
+            { id: "items", label: "Items", icon: Package },
+            { id: "orders", label: "Orders", icon: ShoppingBag },
+            { id: "payments", label: "Payment Methods", icon: CreditCard },
+          ].map((t) => (
+            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 rounded-lg px-4 h-11 text-sm font-medium border transition-colors ${tab === t.id ? "bg-primary border-primary text-white" : "bg-[#101014] border-border text-gray-300 hover:border-primary/40"}`}>
+              <t.icon size={16} /> {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === "items" && <ItemsManager />}
+        {tab === "orders" && <OrdersManager />}
+        {tab === "payments" && <PaymentsManager />}
+      </div>
+    </div>
+  );
+};
+
+const ItemsManager = () => {
+  const [items, setItems] = useState(getAdminItems());
+  const [form, setForm] = useState(emptyItem);
+  const [editing, setEditing] = useState(false);
+
+  const refresh = () => setItems(getAdminItems());
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!form.name || !form.price) return;
+    saveAdminItem({ ...form, price: parseFloat(form.price) });
+    setForm(emptyItem); setEditing(false); refresh();
+  };
+  const edit = (it) => { setForm({ ...it, price: String(it.price) }); setEditing(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const remove = (id) => { deleteAdminItem(id); refresh(); };
+
+  return (
+    <div className="grid lg:grid-cols-[360px_1fr] gap-8">
+      <form onSubmit={submit} className="rounded-xl border border-border bg-[#101014] p-5 h-fit">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-white">{editing ? "Edit Item" : "Add New Item"}</h3>
+          {editing && <button type="button" onClick={() => { setForm(emptyItem); setEditing(false); }} className="text-gray-400 hover:text-white"><X size={16} /></button>}
+        </div>
+        <Field label="Name"><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="adm-input" placeholder="Item name" /></Field>
+        <Field label="Category">
+          <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="adm-input">
+            {categories.filter((c) => c.id !== "all").map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+          </select>
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Price (USD)"><input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="adm-input" placeholder="0.00" /></Field>
+          <Field label="RAP"><input value={form.rap} onChange={(e) => setForm({ ...form, rap: e.target.value })} className="adm-input" placeholder="e.g. 120K" /></Field>
+        </div>
+        <Field label="Image URL"><input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} className="adm-input" placeholder="https://..." /></Field>
+        {form.image && <img src={form.image} alt="preview" className="w-20 h-20 object-contain mb-3 rounded-lg border border-border bg-[#0b0b0e]" onError={(e) => { e.target.style.opacity = 0.25; }} />}
+        <label className="flex items-center gap-2 text-sm text-gray-300 mb-4">
+          <input type="checkbox" checked={form.trending} onChange={(e) => setForm({ ...form, trending: e.target.checked })} className="accent-[#e6333f]" /> Show in Trending
+        </label>
+        <button className="w-full bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg h-11 flex items-center justify-center gap-2">
+          <Plus size={16} /> {editing ? "Save Changes" : "Add Item"}
+        </button>
+      </form>
+
+      <div>
+        <h3 className="font-semibold text-white mb-4">Your Items ({items.length})</h3>
+        {items.length === 0 ? (
+          <div className="text-gray-500 text-sm rounded-xl border border-dashed border-border p-10 text-center">No items yet. Add one on the left — it appears on the homepage instantly.</div>
+        ) : (
+          <div className="space-y-3">
+            {items.map((it) => (
+              <div key={it.id} className="flex items-center gap-4 rounded-xl border border-border bg-[#101014] p-3">
+                <img src={it.image} alt={it.name} className="w-14 h-14 object-contain rounded-lg bg-[#0b0b0e]" onError={(e) => { e.target.style.opacity = 0.25; }} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-white truncate">{it.name}</div>
+                  <div className="text-xs text-gray-500 capitalize">{it.category} · RAP {it.rap || "—"} {it.trending && <span className="text-primary">· Trending</span>}</div>
+                </div>
+                <div className="text-primary font-bold">{money(it.price)}</div>
+                <button onClick={() => edit(it)} className="text-gray-400 hover:text-white p-2"><Pencil size={16} /></button>
+                <button onClick={() => remove(it.id)} className="text-gray-400 hover:text-primary p-2"><Trash2 size={16} /></button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const OrdersManager = () => {
+  const [orders] = useState(getOrders());
+  return (
+    <div>
+      <h3 className="font-semibold text-white mb-4">Orders ({orders.length})</h3>
+      {orders.length === 0 ? (
+        <div className="text-gray-500 text-sm rounded-xl border border-dashed border-border p-10 text-center">No orders yet.</div>
+      ) : (
+        <div className="space-y-3">
+          {orders.map((o) => (
+            <div key={o.id} className="rounded-xl border border-border bg-[#101014] p-4">
+              <div className="flex items-center gap-4">
+                <img src={o.itemImage} alt={o.itemName} className="w-12 h-12 object-contain rounded-lg bg-[#0b0b0e]" onError={(e) => { e.target.style.opacity = 0.25; }} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-white truncate">{o.itemName}</div>
+                  <div className="text-xs text-gray-500">{o.id} · {new Date(o.createdAt).toLocaleString()}</div>
+                </div>
+                <span className="text-xs font-semibold text-yellow-400 bg-yellow-400/10 rounded px-2 py-1 capitalize">{o.status}</span>
+              </div>
+              <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <Info k="Roblox" v={o.robloxUsername} />
+                <Info k="Payment" v={o.paymentMethod} />
+                <Info k="Send To" v={o.paymentDetail} />
+                <Info k="Total" v={money(o.total)} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const PaymentsManager = () => {
+  const [methods, setMethods] = useState(getPaymentMethods());
+  const update = (i, key, val) => {
+    const next = methods.map((m, idx) => (idx === i ? { ...m, [key]: val } : m));
+    setMethods(next);
+  };
+  const add = () => setMethods([...methods, { id: `pm_${Date.now()}`, label: "New Method", type: "crypto", detail: "", instructions: "" }]);
+  const remove = (i) => setMethods(methods.filter((_, idx) => idx !== i));
+  const save = () => { savePaymentMethods(methods); };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-white">Receiving Accounts</h3>
+        <div className="flex gap-2">
+          <button onClick={add} className="flex items-center gap-1.5 text-sm bg-[#101014] border border-border rounded-lg px-3 h-10 text-gray-200 hover:border-primary/40"><Plus size={15} /> Add</button>
+          <button onClick={save} className="text-sm bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg px-5 h-10">Save</button>
+        </div>
+      </div>
+      <p className="text-xs text-gray-400 mb-4">These are the accounts buyers send payment to at checkout (your PayPal email, crypto wallet addresses, etc.).</p>
+      <div className="space-y-3">
+        {methods.map((m, i) => (
+          <div key={m.id} className="rounded-xl border border-border bg-[#101014] p-4 grid md:grid-cols-[150px_120px_1fr_auto] gap-3 items-start">
+            <input value={m.label} onChange={(e) => update(i, "label", e.target.value)} className="adm-input !mb-0" placeholder="Label" />
+            <select value={m.type} onChange={(e) => update(i, "type", e.target.value)} className="adm-input !mb-0"><option value="crypto">Crypto</option><option value="paypal">PayPal</option><option value="other">Other</option></select>
+            <div className="space-y-2">
+              <input value={m.detail} onChange={(e) => update(i, "detail", e.target.value)} className="adm-input !mb-0" placeholder="Address / email" />
+              <input value={m.instructions} onChange={(e) => update(i, "instructions", e.target.value)} className="adm-input !mb-0" placeholder="Instructions (optional)" />
+            </div>
+            <button onClick={() => remove(i)} className="text-gray-400 hover:text-primary p-2"><Trash2 size={16} /></button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const Field = ({ label, children }) => (
+  <div className="mb-3">
+    <label className="block text-xs text-gray-400 mb-1.5">{label}</label>
+    {children}
+  </div>
+);
+const Info = ({ k, v }) => (
+  <div className="rounded-lg bg-[#0b0b0e] border border-border p-2.5">
+    <div className="text-gray-500">{k}</div>
+    <div className="text-white break-all mt-0.5">{v}</div>
+  </div>
+);
+
+export default Admin;
