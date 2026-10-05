@@ -134,8 +134,8 @@ export const sortOptions = [
   { id: "rate-low", label: "Rate (Low to High)" },
 ];
 
-export const demandOptions = ["All", "Terrible", "Low", "Normal", "High", "Amazing"];
-export const rarityOptions = ["All", "Common", "Uncommon", "Rare", "Epic", "Legendary"];
+export const demandOptions = ["All", "Amazing", "High", "Normal", "Low", "Terrible"];
+export const rarityOptions = ["All", "Rare"];
 
 export const parseRap = (rap) => {
   if (!rap || rap === "\u2014") return 0;
