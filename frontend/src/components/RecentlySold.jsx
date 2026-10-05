@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { recentlySold, giveaway } from "../data/mock";
-import { money } from "../data/store";
+import { useCurrency } from "../context/CurrencyContext";
 
 const Flip = ({ value, label }) => (
   <div className="flex flex-col items-center">
@@ -28,6 +28,7 @@ const useCountdown = (target) => {
 
 const RecentlySold = () => {
   const { days, hours, minutes, seconds } = useCountdown(giveaway.endsAt);
+  const { format } = useCurrency();
   return (
     <section className="pt-8">
       <h2 className="font-display font-extrabold text-2xl md:text-3xl tracking-wide text-white mb-5">RECENTLY SOLD</h2>
@@ -35,7 +36,7 @@ const RecentlySold = () => {
         <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
           {recentlySold.map((it, idx) => (
             <div key={idx} className="card-redglow shrink-0 w-[150px] rounded-xl bg-[#101014] border border-border overflow-hidden">
-              <div className="px-3 pt-2 text-sm font-semibold text-white">{money(it.price)}</div>
+              <div className="px-3 pt-2 text-sm font-semibold text-white">{format(it.price)}</div>
               <div className="aspect-square flex items-center justify-center p-3">
                 <img src={it.image} alt={it.name} className="max-h-full object-contain" onError={(e) => { e.target.style.opacity = 0.25; }} />
               </div>

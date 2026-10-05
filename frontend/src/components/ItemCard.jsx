@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { money } from "../data/store";
+import { useCurrency } from "../context/CurrencyContext";
 
 const PayIcons = ({ methods }) => (
   <div className="absolute top-2.5 right-2.5 flex flex-col items-end gap-1.5">
@@ -20,6 +20,7 @@ const PayIcons = ({ methods }) => (
 
 const ItemCard = ({ item, showPay = false }) => {
   const navigate = useNavigate();
+  const { format } = useCurrency();
   return (
     <button
       onClick={() => navigate(`/item/${item.id}`)}
@@ -39,7 +40,7 @@ const ItemCard = ({ item, showPay = false }) => {
         <div className="text-sm font-semibold text-white truncate">{item.name}</div>
         <div className="mt-1 flex items-center justify-between">
           <span className="text-[11px] text-gray-500">RAP <span className="text-gray-300">{item.rap || "—"}</span></span>
-          <span className="text-sm font-bold text-primary">From {money(item.price)}</span>
+          <span className="text-sm font-bold text-primary">From {format(item.price)}</span>
         </div>
       </div>
     </button>

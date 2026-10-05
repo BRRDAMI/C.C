@@ -1,12 +1,22 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronDown, Menu, X, Star } from "lucide-react";
+import { ChevronDown, Menu, X, Star, Check } from "lucide-react";
 import { navLinks } from "../data/mock";
+import { useCurrency } from "../context/CurrencyContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 
 const Logo = () => (
-  <Link to="/" className="flex items-center gap-1 select-none">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" className="text-primary">
-      <path d="M12 20c-1-5-4-7-8-8 3-1 5-3 5-7 1 3 2 4 3 5 1-1 2-2 3-5 0 4 2 6 5 7-4 1-7 3-8 8z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+  <Link to="/" className="flex items-center gap-2 select-none">
+    <svg width="30" height="26" viewBox="0 0 32 28" fill="none" className="text-primary">
+      <path
+        d="M16 27C14.5 19 12 15 8.5 12.5c1.5-.3 2.6-1 3.2-2.2.6-1.2.6-2.7.2-4.3 1.1 1 1.9 2.1 2.3 3.4.3-1.6.2-3.4-.2-5.4 1 1.3 1.7 2.8 2 4.5.3-1.7 1-3.2 2-4.5-.4 2-.5 3.8-.2 5.4.4-1.3 1.2-2.4 2.3-3.4-.4 1.6-.4 3.1.2 4.3.6 1.2 1.7 1.9 3.2 2.2C20 15 17.5 19 16 27Z"
+        fill="currentColor"
+      />
     </svg>
     <span className="font-display font-extrabold text-2xl tracking-tight text-white lowercase">adurite</span>
   </Link>
@@ -15,6 +25,7 @@ const Logo = () => (
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const { current, currencies, setCode, code } = useCurrency();
   return (
     <header className="sticky top-0 z-40 bg-[#0b0b0e]/95 backdrop-blur border-b border-border">
       <div className="max-w-[1400px] mx-auto px-4 lg:px-8">
@@ -35,11 +46,29 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-white bg-primary hover:bg-primary/90 transition-colors rounded-lg px-4 h-11">
-              USD ($) <ChevronDown size={15} />
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-white bg-primary hover:bg-primary/90 transition-colors rounded-lg px-4 h-11 outline-none">
+                  {current.label} <ChevronDown size={15} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-[#101014] border-border text-white min-w-[160px]">
+                {currencies.map((c) => (
+                  <DropdownMenuItem
+                    key={c.code}
+                    onClick={() => setCode(c.code)}
+                    className="flex items-center justify-between cursor-pointer focus:bg-primary/15 focus:text-white"
+                  >
+                    {c.label}
+                    {code === c.code && <Check size={15} className="text-primary" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <a
-              href="#discord"
+              href="https://discord.com/invite/adu"
+              target="_blank"
+              rel="noopener noreferrer"
               className="hidden sm:flex items-center gap-2 text-sm font-semibold text-white border border-primary/70 hover:bg-primary/10 transition-colors rounded-lg px-4 h-11"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4.4A17 17 0 0 0 15.7 3l-.3.5a12 12 0 0 1 3.7 1.9 11 11 0 0 0-9.8 0A12 12 0 0 1 13 3.5L12.7 3A17 17 0 0 0 8.4 4.4C5.6 8.5 4.8 12.5 5.2 16.4a17 17 0 0 0 5.2 2.6l.6-1a11 11 0 0 1-1.8-.9l.4-.3a8 8 0 0 0 6.8 0l.4.3c-.6.4-1.2.7-1.8.9l.6 1a17 17 0 0 0 5.2-2.6c.5-4.6-.8-8.5-2.6-12zM9.7 14c-.8 0-1.5-.8-1.5-1.7s.7-1.7 1.5-1.7 1.5.8 1.5 1.7-.7 1.7-1.5 1.7zm4.6 0c-.8 0-1.5-.8-1.5-1.7s.7-1.7 1.5-1.7 1.5.8 1.5 1.7-.7 1.7-1.5 1.7z"/></svg>

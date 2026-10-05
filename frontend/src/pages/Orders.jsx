@@ -3,10 +3,12 @@ import { Link } from "react-router-dom";
 import { PackageSearch } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { getOrders, money } from "../data/store";
+import { getOrders } from "../data/store";
+import { useCurrency } from "../context/CurrencyContext";
 
 const Orders = () => {
   const orders = getOrders();
+  const { format } = useCurrency();
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -28,7 +30,7 @@ const Orders = () => {
                   <div className="text-xs text-gray-500">{o.id} · {new Date(o.createdAt).toLocaleDateString()} · {o.paymentMethod}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-primary font-bold">{money(o.total)}</div>
+                  <div className="text-primary font-bold">{format(o.total)}</div>
                   <span className="text-xs font-semibold text-yellow-400 capitalize">{o.status}</span>
                 </div>
               </div>

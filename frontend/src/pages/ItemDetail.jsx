@@ -3,12 +3,14 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, ShieldCheck, Zap, BadgeCheck } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { findItem, money } from "../data/store";
+import { findItem } from "../data/store";
+import { useCurrency } from "../context/CurrencyContext";
 
 const ItemDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const item = findItem(id);
+  const { format } = useCurrency();
 
   if (!item) {
     return (
@@ -45,7 +47,7 @@ const ItemDetail = () => {
             <div className="mt-6 flex items-end gap-4">
               <div>
                 <div className="text-xs text-gray-500">Price</div>
-                <div className="text-4xl font-bold text-primary">{money(item.price)}</div>
+                <div className="text-4xl font-bold text-primary">{format(item.price)}</div>
               </div>
               <div className="pb-1">
                 <div className="text-xs text-gray-500">RAP</div>

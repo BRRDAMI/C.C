@@ -3,13 +3,15 @@ import { useLocation, useNavigate, Link } from "react-router-dom";
 import { Copy, Check, CheckCircle2, Wallet, Mail } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { getPaymentMethods, createOrder, money } from "../data/store";
+import { getPaymentMethods, createOrder } from "../data/store";
+import { useCurrency } from "../context/CurrencyContext";
 
 const Checkout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const item = location.state?.item;
   const methods = getPaymentMethods();
+  const { format } = useCurrency();
 
   const [robloxUsername, setRobloxUsername] = useState("");
   const [selected, setSelected] = useState(methods[0]?.id || "");
@@ -65,7 +67,7 @@ const Checkout = () => {
             <Row k="Roblox Username" v={done.robloxUsername} />
             <Row k="Payment Method" v={done.paymentMethod} />
             <Row k="Send To" v={done.paymentDetail} mono />
-            <Row k="Total" v={money(done.total)} />
+            <Row k="Total" v={format(done.total)} />
           </div>
           <button onClick={() => navigate("/")} className="mt-6 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl h-12 px-8">
             Back to Marketplace
@@ -138,7 +140,7 @@ const Checkout = () => {
             </div>
             <div className="flex items-center justify-between py-4 text-sm">
               <span className="text-gray-400">Total</span>
-              <span className="text-2xl font-bold text-primary">{money(item.price)}</span>
+              <span className="text-2xl font-bold text-primary">{format(item.price)}</span>
             </div>
             {error && <div className="text-xs text-primary mb-3">{error}</div>}
             <button onClick={confirm} className="w-full bg-primary hover:bg-primary/90 transition-colors text-white font-semibold rounded-xl h-13 py-3.5">
