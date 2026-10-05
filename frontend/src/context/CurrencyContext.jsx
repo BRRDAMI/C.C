@@ -5,10 +5,9 @@ export const currencies = [
   { code: "USD", symbol: "$", rate: 1, label: "USD ($)" },
   { code: "EUR", symbol: "\u20ac", rate: 0.92, label: "EUR (\u20ac)" },
   { code: "GBP", symbol: "\u00a3", rate: 0.79, label: "GBP (\u00a3)" },
-  { code: "CAD", symbol: "C$", rate: 1.37, label: "CAD (C$)" },
   { code: "AUD", symbol: "A$", rate: 1.52, label: "AUD (A$)" },
-  { code: "INR", symbol: "\u20b9", rate: 83.3, label: "INR (\u20b9)" },
-  { code: "BRL", symbol: "R$", rate: 5.1, label: "BRL (R$)" },
+  { code: "CAD", symbol: "C$", rate: 1.37, label: "CAD (C$)" },
+  { code: "JPY", symbol: "\u00a5", rate: 157, label: "JPY (\u00a5)" },
 ];
 
 const CurrencyContext = createContext(null);
@@ -24,10 +23,10 @@ export const CurrencyProvider = ({ children }) => {
 
   const format = (usdAmount) => {
     const n = Number(usdAmount) * current.rate;
-    const decimals = n % 1 ? 2 : (n < 1000 ? 2 : 0);
+    const decimals = current.code === "JPY" ? 0 : (n % 1 ? 2 : (n < 1000 ? 2 : 0));
     const formatted = n.toLocaleString("en-US", {
       minimumFractionDigits: decimals,
-      maximumFractionDigits: 2,
+      maximumFractionDigits: decimals,
     });
     return `${current.symbol}${formatted}`;
   };

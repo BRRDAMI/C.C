@@ -7,7 +7,7 @@ const Footer = () => {
       <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
           <div>
-            <div className="font-display font-extrabold text-xl text-white lowercase mb-3">adurite</div>
+            <img src="/adurite-logo.png" alt="adurite" className="h-7 w-auto mb-3" />
             <p className="text-sm text-gray-400 leading-relaxed">The #1 gaming item marketplace. Buy &amp; sell limited in-game items from verified sellers.</p>
           </div>
           {[

@@ -11,14 +11,8 @@ import {
 } from "./ui/dropdown-menu";
 
 const Logo = () => (
-  <Link to="/" className="flex items-center gap-2 select-none">
-    <svg width="30" height="26" viewBox="0 0 32 28" fill="none" className="text-primary">
-      <path
-        d="M16 27C14.5 19 12 15 8.5 12.5c1.5-.3 2.6-1 3.2-2.2.6-1.2.6-2.7.2-4.3 1.1 1 1.9 2.1 2.3 3.4.3-1.6.2-3.4-.2-5.4 1 1.3 1.7 2.8 2 4.5.3-1.7 1-3.2 2-4.5-.4 2-.5 3.8-.2 5.4.4-1.3 1.2-2.4 2.3-3.4-.4 1.6-.4 3.1.2 4.3.6 1.2 1.7 1.9 3.2 2.2C20 15 17.5 19 16 27Z"
-        fill="currentColor"
-      />
-    </svg>
-    <span className="font-display font-extrabold text-2xl tracking-tight text-white lowercase">adurite</span>
+  <Link to="/" className="flex items-center select-none">
+    <img src="/adurite-logo.png" alt="adurite" className="h-7 w-auto" />
   </Link>
 );
 
