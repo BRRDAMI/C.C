@@ -115,3 +115,30 @@ export const defaultPaymentMethods = [
 ];
 
 export const allItems = [...trending, ...listings];
+
+// --- Filter helpers (used by the sidebar) ---
+export const paymentOptions = [
+  { id: "all", label: "All" },
+  { id: "paypal", label: "Paypal" },
+  { id: "card", label: "Card" },
+  { id: "apple", label: "Apple Pay" },
+];
+
+export const tagOptions = ["All", "Admin", "Particles", "Dress to Impress"];
+
+export const getItemPayments = (item) => {
+  if (item.payments && item.payments.length) return item.payments;
+  const p = ["paypal"];
+  if (item.price <= 20000) p.push("card");
+  if (item.price <= 2000) p.push("apple");
+  return p;
+};
+
+export const getItemTags = (item) => {
+  const tags = [];
+  if (item.admin) tags.push("Admin");
+  if (item.tags && item.tags.length) return [...new Set([...tags, ...item.tags])];
+  if (/horn|fire|flam|frozen|ice|inferno|galaxy|star|glow|nether|toxic|blizzard|void|sparkle|periastron/i.test(item.name)) tags.push("Particles");
+  if (/fedora|crown|valk|queen|king|princess|hat|fairy|wing|domino|headphone|helm|antler|shades|visor/i.test(item.name)) tags.push("Dress to Impress");
+  return tags;
+};

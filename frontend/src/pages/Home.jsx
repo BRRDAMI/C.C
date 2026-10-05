@@ -3,15 +3,19 @@ import { Search } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import RecentlySold from "../components/RecentlySold";
-import Sidebar from "../components/Sidebar";
+import Sidebar, { PRICE_MAX } from "../components/Sidebar";
 import CategoryTabs from "../components/CategoryTabs";
 import ItemCard from "../components/ItemCard";
 import { getTrending, getListings } from "../data/store";
+import { getItemPayments, getItemTags } from "../data/mock";
+
+const defaultFilters = { min: 0, max: PRICE_MAX, sort: "high", payment: "all", tag: "All" };
 
 const Home = () => {
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
-  const [priceRange, setPriceRange] = useState({ min: "", max: "" });
+  const [market, setMarket] = useState("limiteds");
+  const [filters, setFilters] = useState(defaultFilters);
 
   const trendingItems = useMemo(() => getTrending(), []);
   const listingItems = useMemo(() => getListings(), []);
@@ -19,15 +23,17 @@ const Home = () => {
   const filterFn = (it) => {
     if (category !== "all" && it.category !== category) return false;
     if (query && !it.name.toLowerCase().includes(query.toLowerCase())) return false;
-    const min = parseFloat(priceRange.min);
-    const max = parseFloat(priceRange.max);
-    if (!isNaN(min) && it.price < min) return false;
-    if (!isNaN(max) && it.price > max) return false;
+    if (it.price < filters.min) return false;
+    if (filters.max < PRICE_MAX && it.price > filters.max) return false;
+    if (filters.payment !== "all" && !getItemPayments(it).includes(filters.payment)) return false;
+    if (filters.tag !== "All" && !getItemTags(it).includes(filters.tag)) return false;
     return true;
   };
 
-  const filteredTrending = trendingItems.filter(filterFn);
-  const filteredListings = listingItems.filter(filterFn);
+  const sortFn = (a, b) => (filters.sort === "high" ? b.price - a.price : a.price - b.price);
+
+  const filteredTrending = trendingItems.filter(filterFn).sort(sortFn);
+  const filteredListings = listingItems.filter(filterFn).sort(sortFn);
 
   return (
     <div className="min-h-screen bg-background">
@@ -36,10 +42,15 @@ const Home = () => {
         <RecentlySold />
 
         <div className="mt-10 flex flex-col lg:flex-row gap-8">
-          <Sidebar priceRange={priceRange} setPriceRange={setPriceRange} />
+          <Sidebar
+            market={market}
+            setMarket={setMarket}
+            filters={filters}
+            setFilters={setFilters}
+            resetFilters={() => setFilters(defaultFilters)}
+          />
 
           <div className="flex-1 min-w-0">
-            {/* Search */}
             <div className="relative mb-5">
               <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
               <input
@@ -54,7 +65,6 @@ const Home = () => {
               <CategoryTabs active={category} setActive={setCategory} />
             </div>
 
-            {/* Trending */}
             {filteredTrending.length > 0 && (
               <section className="mb-10">
                 <h2 className="font-display font-bold text-2xl text-white mb-5">Trending Right Now</h2>
@@ -66,7 +76,6 @@ const Home = () => {
               </section>
             )}
 
-            {/* All Listings */}
             <section>
               <h2 className="font-display font-bold text-2xl text-white mb-5">
                 All Listings <span className="text-gray-500 text-base font-medium">{filteredListings.length} items</span>
