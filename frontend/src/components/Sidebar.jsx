@@ -2,16 +2,17 @@ import React, { useState } from "react";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import {
   ChevronRight, ChevronUp, Tag, ArrowUpDown, Gem, RotateCcw,
-  Skull, Bot, Crosshair, Pickaxe,
 } from "lucide-react";
-import { markets, paymentOptions, tagOptions } from "../data/mock";
+import {
+  markets, paymentOptions, sortOptions, demandOptions, rarityOptions,
+} from "../data/mock";
+import { marketIcons } from "./MarketIcons";
 
-const marketIcon = { limiteds: Skull, toycodes: Bot, cs2: Crosshair, rust: Pickaxe };
 export const PRICE_MAX = 10000;
 
 const Section = ({ icon: Icon, title, open, setOpen, children }) => (
   <div className="py-5 border-t border-border">
-    <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between">
+    <button onClick={setOpen} className="w-full flex items-center justify-between">
       <span className="flex items-center gap-2.5 text-white">
         <Icon size={18} />
         <span className="font-display font-semibold text-lg">{title}</span>
@@ -54,7 +55,9 @@ const PriceBox = ({ label, value, isMax, onChange }) => (
 );
 
 const Sidebar = ({ market, setMarket, filters, setFilters, resetFilters }) => {
-  const [open, setOpen] = useState({ price: true, sort: true, payment: true, tags: true });
+  const [open, setOpen] = useState({
+    price: true, sort: true, payment: true, demand: false, rarity: false,
+  });
   const toggle = (k) => setOpen((o) => ({ ...o, [k]: !o[k] }));
   const set = (patch) => setFilters((f) => ({ ...f, ...patch }));
 
@@ -63,25 +66,25 @@ const Sidebar = ({ market, setMarket, filters, setFilters, resetFilters }) => {
       <h3 className="font-display font-bold text-2xl text-white mb-4">Markets</h3>
       <div className="space-y-2">
         {markets.map((m) => {
-          const Icon = marketIcon[m.id] || Skull;
+          const Icon = marketIcons[m.id];
           const active = market === m.id;
           return (
             <button
               key={m.id}
               onClick={() => setMarket(m.id)}
-              className={`w-full flex items-center justify-between rounded-xl pl-3.5 pr-3 h-[52px] border transition-colors ${
+              className={`w-full flex items-center justify-between rounded-xl pl-3.5 pr-3 h-[56px] border transition-colors ${
                 active
-                  ? "border-primary/70 border-l-[3px] bg-gradient-to-r from-primary/15 to-transparent text-white"
-                  : "border-transparent hover:bg-[#121216] text-gray-200"
+                  ? "border-primary border-l-[3px] bg-gradient-to-r from-primary/15 to-transparent text-white"
+                  : "border-transparent hover:bg-[#121216] text-gray-100"
               }`}
             >
               <span className="flex items-center gap-3">
-                <Icon size={19} className={active ? "text-primary" : "text-gray-300"} />
-                <span className="font-medium">{m.label}</span>
+                <Icon size={26} />
+                <span className="font-semibold text-[17px]">{m.label}</span>
               </span>
               <span className="flex items-center gap-2">
-                {m.badge && <span className="text-[10px] font-bold text-white bg-primary rounded px-1.5 py-0.5">{m.badge}</span>}
-                <ChevronRight size={16} className="text-gray-500" />
+                {m.badge && <span className="text-[11px] font-bold text-white bg-primary rounded-md px-2 py-0.5">{m.badge}</span>}
+                <ChevronRight size={17} className="text-gray-500" />
               </span>
             </button>
           );
@@ -117,8 +120,9 @@ const Sidebar = ({ market, setMarket, filters, setFilters, resetFilters }) => {
 
       <Section icon={ArrowUpDown} title="Sort" open={open.sort} setOpen={() => toggle("sort")}>
         <div className="space-y-1">
-          <RadioRow checked={filters.sort === "high"} label="Price (High to Low)" onClick={() => set({ sort: "high" })} />
-          <RadioRow checked={filters.sort === "low"} label="Price (Low to High)" onClick={() => set({ sort: "low" })} />
+          {sortOptions.map((s) => (
+            <RadioRow key={s.id} checked={filters.sort === s.id} label={s.label} onClick={() => set({ sort: s.id })} />
+          ))}
         </div>
       </Section>
 
@@ -130,10 +134,18 @@ const Sidebar = ({ market, setMarket, filters, setFilters, resetFilters }) => {
         </div>
       </Section>
 
-      <Section icon={Gem} title="Tags" open={open.tags} setOpen={() => toggle("tags")}>
+      <Section icon={Gem} title="Demand" open={open.demand} setOpen={() => toggle("demand")}>
         <div className="space-y-1">
-          {tagOptions.map((t) => (
-            <RadioRow key={t} checked={filters.tag === t} label={t} onClick={() => set({ tag: t })} />
+          {demandOptions.map((d) => (
+            <RadioRow key={d} checked={filters.demand === d} label={d} onClick={() => set({ demand: d })} />
+          ))}
+        </div>
+      </Section>
+
+      <Section icon={Gem} title="Rarity" open={open.rarity} setOpen={() => toggle("rarity")}>
+        <div className="space-y-1">
+          {rarityOptions.map((r) => (
+            <RadioRow key={r} checked={filters.rarity === r} label={r} onClick={() => set({ rarity: r })} />
           ))}
         </div>
       </Section>

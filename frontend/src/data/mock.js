@@ -126,6 +126,44 @@ export const paymentOptions = [
 
 export const tagOptions = ["All", "Admin", "Particles", "Dress to Impress"];
 
+export const sortOptions = [
+  { id: "rap-high", label: "Rap (High to Low)" },
+  { id: "rap-low", label: "Rap (Low to High)" },
+  { id: "price-high", label: "Price (High to Low)" },
+  { id: "price-low", label: "Price (Low to High)" },
+  { id: "rate-low", label: "Rate (Low to High)" },
+];
+
+export const demandOptions = ["All", "Terrible", "Low", "Normal", "High", "Amazing"];
+export const rarityOptions = ["All", "Common", "Uncommon", "Rare", "Epic", "Legendary"];
+
+export const parseRap = (rap) => {
+  if (!rap || rap === "\u2014") return 0;
+  const m = String(rap).trim().toUpperCase();
+  const num = parseFloat(m) || 0;
+  if (m.endsWith("M")) return num * 1e6;
+  if (m.endsWith("K")) return num * 1e3;
+  return num;
+};
+
+export const getItemRarity = (item) => {
+  const p = item.price;
+  if (p < 100) return "Common";
+  if (p < 1000) return "Uncommon";
+  if (p < 5000) return "Rare";
+  if (p < 20000) return "Epic";
+  return "Legendary";
+};
+
+export const getItemDemand = (item) => {
+  const r = parseRap(item.rap);
+  if (r < 20000) return "Terrible";
+  if (r < 100000) return "Low";
+  if (r < 500000) return "Normal";
+  if (r < 2000000) return "High";
+  return "Amazing";
+};
+
 export const getItemPayments = (item) => {
   if (item.payments && item.payments.length) return item.payments;
   const p = ["paypal"];

@@ -7,9 +7,9 @@ import Sidebar, { PRICE_MAX } from "../components/Sidebar";
 import CategoryTabs from "../components/CategoryTabs";
 import ItemCard from "../components/ItemCard";
 import { getTrending, getListings } from "../data/store";
-import { getItemPayments, getItemTags } from "../data/mock";
+import { getItemPayments, getItemDemand, getItemRarity, parseRap } from "../data/mock";
 
-const defaultFilters = { min: 0, max: PRICE_MAX, sort: "high", payment: "all", tag: "All" };
+const defaultFilters = { min: 0, max: PRICE_MAX, sort: "rap-high", payment: "all", demand: "All", rarity: "All" };
 
 const Home = () => {
   const [category, setCategory] = useState("all");
@@ -26,11 +26,20 @@ const Home = () => {
     if (it.price < filters.min) return false;
     if (filters.max < PRICE_MAX && it.price > filters.max) return false;
     if (filters.payment !== "all" && !getItemPayments(it).includes(filters.payment)) return false;
-    if (filters.tag !== "All" && !getItemTags(it).includes(filters.tag)) return false;
+    if (filters.demand !== "All" && getItemDemand(it) !== filters.demand) return false;
+    if (filters.rarity !== "All" && getItemRarity(it) !== filters.rarity) return false;
     return true;
   };
 
-  const sortFn = (a, b) => (filters.sort === "high" ? b.price - a.price : a.price - b.price);
+  const rate = (it) => it.price / (parseRap(it.rap) || 1);
+  const sortFns = {
+    "rap-high": (a, b) => parseRap(b.rap) - parseRap(a.rap),
+    "rap-low": (a, b) => parseRap(a.rap) - parseRap(b.rap),
+    "price-high": (a, b) => b.price - a.price,
+    "price-low": (a, b) => a.price - b.price,
+    "rate-low": (a, b) => rate(a) - rate(b),
+  };
+  const sortFn = sortFns[filters.sort] || sortFns["rap-high"];
 
   const filteredTrending = trendingItems.filter(filterFn).sort(sortFn);
   const filteredListings = listingItems.filter(filterFn).sort(sortFn);
