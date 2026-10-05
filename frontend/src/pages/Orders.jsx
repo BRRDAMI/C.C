@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { PackageSearch } from "lucide-react";
 import Navbar from "../components/Navbar";
@@ -7,8 +7,12 @@ import { getOrders } from "../data/store";
 import { useCurrency } from "../context/CurrencyContext";
 
 const Orders = () => {
-  const orders = getOrders();
+  const [orders, setOrders] = useState([]);
   const { format } = useCurrency();
+
+  useEffect(() => {
+    getOrders().then(setOrders);
+  }, []);
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -24,10 +28,10 @@ const Orders = () => {
           <div className="space-y-3">
             {orders.map((o) => (
               <div key={o.id} className="flex items-center gap-4 rounded-xl border border-border bg-[#101014] p-4">
-                <img src={o.itemImage} alt={o.itemName} className="w-14 h-14 object-contain rounded-lg bg-[#0b0b0e]" onError={(e) => { e.target.style.opacity = 0.25; }} />
+                <img src={o.item_image} alt={o.item_name} className="w-14 h-14 object-contain rounded-lg bg-[#0b0b0e]" onError={(e) => { e.target.style.opacity = 0.25; }} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-white truncate">{o.itemName}</div>
-                  <div className="text-xs text-gray-500">{o.id} · {new Date(o.createdAt).toLocaleDateString()} · {o.paymentMethod}</div>
+                  <div className="text-sm font-semibold text-white truncate">{o.item_name}</div>
+                  <div className="text-xs text-gray-500">{o.id} · {new Date(o.created_at).toLocaleDateString()} · {o.payment_method}</div>
                 </div>
                 <div className="text-right">
                   <div className="text-primary font-bold">{format(o.total)}</div>

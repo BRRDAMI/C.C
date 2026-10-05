@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, ShieldCheck, Zap, BadgeCheck } from "lucide-react";
 import Navbar from "../components/Navbar";
@@ -9,8 +9,23 @@ import { useCurrency } from "../context/CurrencyContext";
 const ItemDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const item = findItem(id);
   const { format } = useCurrency();
+  const [item, setItem] = useState(undefined);
+
+  useEffect(() => {
+    let active = true;
+    findItem(id).then((res) => { if (active) setItem(res || null); });
+    return () => { active = false; };
+  }, [id]);
+
+  if (item === undefined) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-24 text-center text-gray-400">Loading…</div>
+      </div>
+    );
+  }
 
   if (!item) {
     return (

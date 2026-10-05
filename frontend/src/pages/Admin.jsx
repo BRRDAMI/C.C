@@ -1,11 +1,13 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  LogOut, Plus, Trash2, Package, ShoppingBag, CreditCard, Pencil, X,
+  LogOut, Plus, Trash2, Package, ShoppingBag, CreditCard, Pencil, X, Loader2,
 } from "lucide-react";
 import {
-  isAdminAuthed, setAdminAuthed, getAdminItems, saveAdminItem, deleteAdminItem,
-  getOrders, getPaymentMethods, savePaymentMethods, money,
+  login, logout, verifyAdmin, money,
+  adminGetItems, adminCreateItem, adminUpdateItem, adminDeleteItem,
+  adminGetOrders, adminUpdateOrderStatus,
+  adminGetPaymentMethods, savePaymentMethods,
 } from "../data/store";
 import { categories } from "../data/mock";
 
@@ -13,29 +15,50 @@ const emptyItem = { name: "", category: "hat", rap: "", price: "", image: "", tr
 
 const Admin = () => {
   const navigate = useNavigate();
-  const [authed, setAuthed] = useState(isAdminAuthed());
+  const [authed, setAuthed] = useState(false);
+  const [checking, setChecking] = useState(true);
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState("items");
 
-  const login = (e) => {
+  useEffect(() => {
+    verifyAdmin().then((ok) => { setAuthed(ok); setChecking(false); });
+  }, []);
+
+  const doLogin = async (e) => {
     e.preventDefault();
-    // Mock auth for the frontend phase (backend will validate real credentials).
-    if (user && pass) { setAdminAuthed(true); setAuthed(true); setErr(""); }
-    else setErr("Enter username and password.");
+    setErr("");
+    setBusy(true);
+    try {
+      await login(user, pass);
+      setAuthed(true);
+    } catch {
+      setErr("Invalid username or password.");
+    } finally {
+      setBusy(false);
+    }
   };
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center text-gray-400">
+        <Loader2 className="animate-spin" />
+      </div>
+    );
+  }
 
   if (!authed) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <form onSubmit={login} className="w-full max-w-sm rounded-2xl border border-border bg-[#101014] p-8">
+        <form onSubmit={doLogin} className="w-full max-w-sm rounded-2xl border border-border bg-[#101014] p-8">
           <div className="font-display font-extrabold text-2xl text-white lowercase mb-1">adurite <span className="text-primary">admin</span></div>
           <p className="text-sm text-gray-400 mb-6">Sign in to manage the marketplace.</p>
           <input value={user} onChange={(e) => setUser(e.target.value)} placeholder="Username" className="w-full bg-[#0b0b0e] border border-border rounded-lg px-4 h-12 text-sm text-white mb-3 focus:border-primary outline-none" />
           <input value={pass} onChange={(e) => setPass(e.target.value)} type="password" placeholder="Password" className="w-full bg-[#0b0b0e] border border-border rounded-lg px-4 h-12 text-sm text-white mb-4 focus:border-primary outline-none" />
           {err && <div className="text-xs text-primary mb-3">{err}</div>}
-          <button className="w-full bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg h-12">Log In</button>
+          <button disabled={busy} className="w-full bg-primary hover:bg-primary/90 disabled:opacity-60 text-white font-semibold rounded-lg h-12">{busy ? "Signing in…" : "Log In"}</button>
           <button type="button" onClick={() => navigate("/")} className="w-full text-xs text-gray-500 mt-4 hover:text-gray-300">← Back to site</button>
         </form>
       </div>
@@ -49,7 +72,7 @@ const Admin = () => {
           <div className="font-display font-extrabold text-xl text-white lowercase">adurite <span className="text-primary">admin</span></div>
           <div className="flex items-center gap-3">
             <button onClick={() => navigate("/")} className="text-sm text-gray-300 hover:text-white">View Site</button>
-            <button onClick={() => { setAdminAuthed(false); setAuthed(false); }} className="flex items-center gap-2 text-sm text-gray-300 hover:text-primary"><LogOut size={16} /> Logout</button>
+            <button onClick={() => { logout(); setAuthed(false); }} className="flex items-center gap-2 text-sm text-gray-300 hover:text-primary"><LogOut size={16} /> Logout</button>
           </div>
         </div>
       </header>
@@ -76,27 +99,34 @@ const Admin = () => {
 };
 
 const ItemsManager = () => {
-  const [items, setItems] = useState(getAdminItems());
+  const [items, setItems] = useState([]);
   const [form, setForm] = useState(emptyItem);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [busy, setBusy] = useState(false);
 
-  const refresh = () => setItems(getAdminItems());
+  const refresh = () => adminGetItems().then(setItems).catch(() => {});
+  useEffect(() => { refresh(); }, []);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.price) return;
-    saveAdminItem({ ...form, price: parseFloat(form.price) });
-    setForm(emptyItem); setEditing(false); refresh();
+    if (!form.name || form.price === "") return;
+    setBusy(true);
+    const payload = { ...form, price: parseFloat(form.price) };
+    try {
+      if (editing) await adminUpdateItem(editing, payload);
+      else await adminCreateItem(payload);
+      setForm(emptyItem); setEditing(null); await refresh();
+    } finally { setBusy(false); }
   };
-  const edit = (it) => { setForm({ ...it, price: String(it.price) }); setEditing(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
-  const remove = (id) => { deleteAdminItem(id); refresh(); };
+  const edit = (it) => { setForm({ ...it, price: String(it.price) }); setEditing(it.id); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const remove = async (id) => { await adminDeleteItem(id); refresh(); };
 
   return (
     <div className="grid lg:grid-cols-[360px_1fr] gap-8">
       <form onSubmit={submit} className="rounded-xl border border-border bg-[#101014] p-5 h-fit">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-white">{editing ? "Edit Item" : "Add New Item"}</h3>
-          {editing && <button type="button" onClick={() => { setForm(emptyItem); setEditing(false); }} className="text-gray-400 hover:text-white"><X size={16} /></button>}
+          {editing && <button type="button" onClick={() => { setForm(emptyItem); setEditing(null); }} className="text-gray-400 hover:text-white"><X size={16} /></button>}
         </div>
         <Field label="Name"><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="adm-input" placeholder="Item name" /></Field>
         <Field label="Category">
@@ -109,12 +139,22 @@ const ItemsManager = () => {
           <Field label="RAP"><input value={form.rap} onChange={(e) => setForm({ ...form, rap: e.target.value })} className="adm-input" placeholder="e.g. 120K" /></Field>
         </div>
         <Field label="Image URL"><input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} className="adm-input" placeholder="https://..." /></Field>
+        <div className="mb-3">
+          <label className="block text-xs text-gray-400 mb-1.5">Or upload image</label>
+          <input type="file" accept="image/*" onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (!f) return;
+            const reader = new FileReader();
+            reader.onload = () => setForm((p) => ({ ...p, image: reader.result }));
+            reader.readAsDataURL(f);
+          }} className="block w-full text-xs text-gray-400 file:mr-3 file:rounded-md file:border-0 file:bg-primary file:text-white file:px-3 file:py-2 file:text-xs file:font-semibold" />
+        </div>
         {form.image && <img src={form.image} alt="preview" className="w-20 h-20 object-contain mb-3 rounded-lg border border-border bg-[#0b0b0e]" onError={(e) => { e.target.style.opacity = 0.25; }} />}
         <label className="flex items-center gap-2 text-sm text-gray-300 mb-4">
           <input type="checkbox" checked={form.trending} onChange={(e) => setForm({ ...form, trending: e.target.checked })} className="accent-[#e6333f]" /> Show in Trending
         </label>
-        <button className="w-full bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg h-11 flex items-center justify-center gap-2">
-          <Plus size={16} /> {editing ? "Save Changes" : "Add Item"}
+        <button disabled={busy} className="w-full bg-primary hover:bg-primary/90 disabled:opacity-60 text-white font-semibold rounded-lg h-11 flex items-center justify-center gap-2">
+          <Plus size={16} /> {busy ? "Saving…" : editing ? "Save Changes" : "Add Item"}
         </button>
       </form>
 
@@ -143,8 +183,18 @@ const ItemsManager = () => {
   );
 };
 
+const STATUSES = ["pending", "completed", "cancelled"];
+
 const OrdersManager = () => {
-  const [orders] = useState(getOrders());
+  const [orders, setOrders] = useState([]);
+  const refresh = () => adminGetOrders().then(setOrders).catch(() => {});
+  useEffect(() => { refresh(); }, []);
+
+  const setStatus = async (id, status) => {
+    await adminUpdateOrderStatus(id, status);
+    refresh();
+  };
+
   return (
     <div>
       <h3 className="font-semibold text-white mb-4">Orders ({orders.length})</h3>
@@ -155,17 +205,19 @@ const OrdersManager = () => {
           {orders.map((o) => (
             <div key={o.id} className="rounded-xl border border-border bg-[#101014] p-4">
               <div className="flex items-center gap-4">
-                <img src={o.itemImage} alt={o.itemName} className="w-12 h-12 object-contain rounded-lg bg-[#0b0b0e]" onError={(e) => { e.target.style.opacity = 0.25; }} />
+                <img src={o.item_image} alt={o.item_name} className="w-12 h-12 object-contain rounded-lg bg-[#0b0b0e]" onError={(e) => { e.target.style.opacity = 0.25; }} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-white truncate">{o.itemName}</div>
-                  <div className="text-xs text-gray-500">{o.id} · {new Date(o.createdAt).toLocaleString()}</div>
+                  <div className="text-sm font-semibold text-white truncate">{o.item_name}</div>
+                  <div className="text-xs text-gray-500">{o.id} · {new Date(o.created_at).toLocaleString()}</div>
                 </div>
-                <span className="text-xs font-semibold text-yellow-400 bg-yellow-400/10 rounded px-2 py-1 capitalize">{o.status}</span>
+                <select value={o.status} onChange={(e) => setStatus(o.id, e.target.value)} className="adm-input !w-auto !h-9 capitalize">
+                  {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
               </div>
               <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                <Info k="Roblox" v={o.robloxUsername} />
-                <Info k="Payment" v={o.paymentMethod} />
-                <Info k="Send To" v={o.paymentDetail} />
+                <Info k="Roblox" v={o.roblox_username} />
+                <Info k="Payment" v={o.payment_method} />
+                <Info k="Send To" v={o.payment_detail} />
                 <Info k="Total" v={money(o.total)} />
               </div>
             </div>
@@ -177,14 +229,14 @@ const OrdersManager = () => {
 };
 
 const PaymentsManager = () => {
-  const [methods, setMethods] = useState(getPaymentMethods());
-  const update = (i, key, val) => {
-    const next = methods.map((m, idx) => (idx === i ? { ...m, [key]: val } : m));
-    setMethods(next);
-  };
+  const [methods, setMethods] = useState([]);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => { adminGetPaymentMethods().then(setMethods).catch(() => {}); }, []);
+
+  const update = (i, key, val) => setMethods(methods.map((m, idx) => (idx === i ? { ...m, [key]: val } : m)));
   const add = () => setMethods([...methods, { id: `pm_${Date.now()}`, label: "New Method", type: "crypto", detail: "", instructions: "" }]);
   const remove = (i) => setMethods(methods.filter((_, idx) => idx !== i));
-  const save = () => { savePaymentMethods(methods); };
+  const save = async () => { await savePaymentMethods(methods); setSaved(true); setTimeout(() => setSaved(false), 1500); };
 
   return (
     <div>
@@ -192,18 +244,18 @@ const PaymentsManager = () => {
         <h3 className="font-semibold text-white">Receiving Accounts</h3>
         <div className="flex gap-2">
           <button onClick={add} className="flex items-center gap-1.5 text-sm bg-[#101014] border border-border rounded-lg px-3 h-10 text-gray-200 hover:border-primary/40"><Plus size={15} /> Add</button>
-          <button onClick={save} className="text-sm bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg px-5 h-10">Save</button>
+          <button onClick={save} className="text-sm bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg px-5 h-10">{saved ? "Saved ✓" : "Save"}</button>
         </div>
       </div>
       <p className="text-xs text-gray-400 mb-4">These are the accounts buyers send payment to at checkout (your PayPal email, crypto wallet addresses, etc.).</p>
       <div className="space-y-3">
         {methods.map((m, i) => (
           <div key={m.id} className="rounded-xl border border-border bg-[#101014] p-4 grid md:grid-cols-[150px_120px_1fr_auto] gap-3 items-start">
-            <input value={m.label} onChange={(e) => update(i, "label", e.target.value)} className="adm-input !mb-0" placeholder="Label" />
-            <select value={m.type} onChange={(e) => update(i, "type", e.target.value)} className="adm-input !mb-0"><option value="crypto">Crypto</option><option value="paypal">PayPal</option><option value="other">Other</option></select>
+            <input value={m.label} onChange={(e) => update(i, "label", e.target.value)} className="adm-input" placeholder="Label" />
+            <select value={m.type} onChange={(e) => update(i, "type", e.target.value)} className="adm-input"><option value="crypto">Crypto</option><option value="paypal">PayPal</option><option value="other">Other</option></select>
             <div className="space-y-2">
-              <input value={m.detail} onChange={(e) => update(i, "detail", e.target.value)} className="adm-input !mb-0" placeholder="Address / email" />
-              <input value={m.instructions} onChange={(e) => update(i, "instructions", e.target.value)} className="adm-input !mb-0" placeholder="Instructions (optional)" />
+              <input value={m.detail} onChange={(e) => update(i, "detail", e.target.value)} className="adm-input" placeholder="Address / email" />
+              <input value={m.instructions} onChange={(e) => update(i, "instructions", e.target.value)} className="adm-input" placeholder="Instructions (optional)" />
             </div>
             <button onClick={() => remove(i)} className="text-gray-400 hover:text-primary p-2"><Trash2 size={16} /></button>
           </div>

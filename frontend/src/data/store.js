@@ -1,75 +1,107 @@
-// Lightweight client store for the mock phase (localStorage-backed).
-// This will be swapped for backend API calls during backend integration.
-import { trending, listings, defaultPaymentMethods } from "./mock";
+// API-backed store. Base catalog (recentlySold/trending/listings) stays in mock.js;
+// admin-added items, orders and payment methods come from the backend.
+import api from "./api";
+import { trending as mockTrending, listings as mockListings } from "./mock";
 
-const ITEMS_KEY = "adurite_admin_items";
-const ORDERS_KEY = "adurite_orders";
-const PAY_KEY = "adurite_payment_methods";
-
-const read = (k, fallback) => {
-  try {
-    const v = localStorage.getItem(k);
-    return v ? JSON.parse(v) : fallback;
-  } catch {
-    return fallback;
-  }
-};
-const write = (k, v) => localStorage.setItem(k, JSON.stringify(v));
-
-// Admin-added items
-export const getAdminItems = () => read(ITEMS_KEY, []);
-export const saveAdminItem = (item) => {
-  const items = getAdminItems();
-  if (item.id && items.find((i) => i.id === item.id)) {
-    const next = items.map((i) => (i.id === item.id ? { ...i, ...item } : i));
-    write(ITEMS_KEY, next);
-    return item;
-  }
-  const newItem = { ...item, id: item.id || `adm_${Date.now()}`, admin: true };
-  write(ITEMS_KEY, [newItem, ...items]);
-  return newItem;
-};
-export const deleteAdminItem = (id) => {
-  write(ITEMS_KEY, getAdminItems().filter((i) => i.id !== id));
-};
-
-// Combined lists for the storefront
-export const getTrending = () => {
-  const adminTrending = getAdminItems().filter((i) => i.trending);
-  return [...adminTrending, ...trending];
-};
-export const getListings = () => {
-  return [...getAdminItems(), ...listings];
-};
-export const getAllItems = () => {
-  const admin = getAdminItems();
-  const base = [...trending, ...listings];
-  const seen = new Set(admin.map((i) => i.id));
-  return [...admin, ...base.filter((i) => !seen.has(i.id))];
-};
-export const findItem = (id) => getAllItems().find((i) => String(i.id) === String(id));
-
-// Orders
-export const getOrders = () => read(ORDERS_KEY, []);
-export const createOrder = (order) => {
-  const orders = getOrders();
-  const newOrder = {
-    ...order,
-    id: `ord_${Date.now()}`,
-    status: "pending",
-    createdAt: new Date().toISOString(),
-  };
-  write(ORDERS_KEY, [newOrder, ...orders]);
-  return newOrder;
-};
-
-// Payment methods
-export const getPaymentMethods = () => read(PAY_KEY, defaultPaymentMethods);
-export const savePaymentMethods = (methods) => write(PAY_KEY, methods);
-
-// Admin auth (mock only; backend replaces this)
-export const isAdminAuthed = () => read("adurite_admin_auth", false);
-export const setAdminAuthed = (v) => write("adurite_admin_auth", v);
+const TOKEN_KEY = "adurite_token";
 
 export const money = (n) =>
   "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
+
+// ---------- Items (public) ----------
+export const fetchAdminItems = async () => {
+  try {
+    const { data } = await api.get("/items");
+    return data || [];
+  } catch {
+    return [];
+  }
+};
+
+export const mergeTrending = (adminItems = []) => [
+  ...adminItems.filter((i) => i.trending),
+  ...mockTrending,
+];
+export const mergeListings = (adminItems = []) => [...adminItems, ...mockListings];
+
+export const findItem = async (id) => {
+  const admin = await fetchAdminItems();
+  const all = [...admin, ...mockTrending, ...mockListings];
+  return all.find((i) => String(i.id) === String(id));
+};
+
+// ---------- Admin items CRUD (protected) ----------
+export const adminGetItems = async () => {
+  const { data } = await api.get("/admin/items");
+  return data;
+};
+export const adminCreateItem = async (item) => {
+  const { data } = await api.post("/admin/items", item);
+  return data;
+};
+export const adminUpdateItem = async (id, item) => {
+  const { data } = await api.put(`/admin/items/${id}`, item);
+  return data;
+};
+export const adminDeleteItem = async (id) => {
+  await api.delete(`/admin/items/${id}`);
+};
+
+// ---------- Orders ----------
+export const createOrder = async (order) => {
+  const { data } = await api.post("/orders", order);
+  return data;
+};
+export const getOrders = async () => {
+  try {
+    const { data } = await api.get("/orders");
+    return data || [];
+  } catch {
+    return [];
+  }
+};
+export const adminGetOrders = async () => {
+  const { data } = await api.get("/admin/orders");
+  return data;
+};
+export const adminUpdateOrderStatus = async (id, status) => {
+  const { data } = await api.patch(`/admin/orders/${id}`, { status });
+  return data;
+};
+
+// ---------- Payment methods ----------
+export const getPaymentMethods = async () => {
+  try {
+    const { data } = await api.get("/payment-methods");
+    return data || [];
+  } catch {
+    return [];
+  }
+};
+export const adminGetPaymentMethods = async () => {
+  const { data } = await api.get("/admin/payment-methods");
+  return data;
+};
+export const savePaymentMethods = async (methods) => {
+  const { data } = await api.put("/admin/payment-methods", { methods });
+  return data;
+};
+
+// ---------- Auth ----------
+export const login = async (username, password) => {
+  const { data } = await api.post("/admin/login", { username, password });
+  localStorage.setItem(TOKEN_KEY, data.token);
+  return data.token;
+};
+export const logout = () => localStorage.removeItem(TOKEN_KEY);
+export const hasToken = () => !!localStorage.getItem(TOKEN_KEY);
+export const verifyAdmin = async () => {
+  if (!hasToken()) return false;
+  try {
+    await api.get("/admin/me");
+    return true;
+  } catch {
+    logout();
+    return false;
+  }
+};

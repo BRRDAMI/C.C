@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { Copy, Check, CheckCircle2, Wallet, Mail } from "lucide-react";
 import Navbar from "../components/Navbar";
@@ -10,14 +10,22 @@ const Checkout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const item = location.state?.item;
-  const methods = getPaymentMethods();
   const { format } = useCurrency();
 
+  const [methods, setMethods] = useState([]);
   const [robloxUsername, setRobloxUsername] = useState("");
-  const [selected, setSelected] = useState(methods[0]?.id || "");
+  const [selected, setSelected] = useState("");
   const [copied, setCopied] = useState(false);
   const [done, setDone] = useState(null);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    getPaymentMethods().then((m) => {
+      setMethods(m);
+      if (m[0]) setSelected(m[0].id);
+    });
+  }, []);
 
   if (!item && !done) {
     return (
@@ -34,24 +42,33 @@ const Checkout = () => {
   const method = methods.find((m) => m.id === selected);
 
   const copy = () => {
+    if (!method) return;
     navigator.clipboard?.writeText(method.detail);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const confirm = () => {
+  const confirm = async () => {
     if (!robloxUsername.trim()) { setError("Please enter your Roblox username."); return; }
+    if (!method) { setError("Please select a payment method."); return; }
     setError("");
-    const order = createOrder({
-      itemId: item.id,
-      itemName: item.name,
-      itemImage: item.image,
-      total: item.price,
-      robloxUsername: robloxUsername.trim(),
-      paymentMethod: method.label,
-      paymentDetail: method.detail,
-    });
-    setDone(order);
+    setSubmitting(true);
+    try {
+      const order = await createOrder({
+        item_id: String(item.id),
+        item_name: item.name,
+        item_image: item.image,
+        total: item.price,
+        roblox_username: robloxUsername.trim(),
+        payment_method: method.label,
+        payment_detail: method.detail,
+      });
+      setDone(order);
+    } catch (e) {
+      setError("Something went wrong placing your order. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (done) {
@@ -63,10 +80,10 @@ const Checkout = () => {
           <h1 className="font-display font-bold text-2xl text-white">Order Placed!</h1>
           <p className="text-gray-400 mt-2">Order <span className="text-white font-mono">{done.id}</span> is pending payment confirmation.</p>
           <div className="mt-6 text-left rounded-xl border border-border bg-[#101014] p-5 space-y-2 text-sm">
-            <Row k="Item" v={done.itemName} />
-            <Row k="Roblox Username" v={done.robloxUsername} />
-            <Row k="Payment Method" v={done.paymentMethod} />
-            <Row k="Send To" v={done.paymentDetail} mono />
+            <Row k="Item" v={done.item_name} />
+            <Row k="Roblox Username" v={done.roblox_username} />
+            <Row k="Payment Method" v={done.payment_method} />
+            <Row k="Send To" v={done.payment_detail} mono />
             <Row k="Total" v={format(done.total)} />
           </div>
           <button onClick={() => navigate("/")} className="mt-6 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl h-12 px-8">
@@ -143,8 +160,8 @@ const Checkout = () => {
               <span className="text-2xl font-bold text-primary">{format(item.price)}</span>
             </div>
             {error && <div className="text-xs text-primary mb-3">{error}</div>}
-            <button onClick={confirm} className="w-full bg-primary hover:bg-primary/90 transition-colors text-white font-semibold rounded-xl h-13 py-3.5">
-              Confirm Order
+            <button onClick={confirm} disabled={submitting} className="w-full bg-primary hover:bg-primary/90 disabled:opacity-60 transition-colors text-white font-semibold rounded-xl h-13 py-3.5">
+              {submitting ? "Placing Order…" : "Confirm Order"}
             </button>
             <p className="text-[11px] text-gray-500 mt-3 text-center">Payment is sent directly to the seller. Order confirms once payment is received.</p>
           </div>

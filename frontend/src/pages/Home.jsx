@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -6,7 +6,7 @@ import RecentlySold from "../components/RecentlySold";
 import Sidebar, { PRICE_MAX } from "../components/Sidebar";
 import CategoryTabs from "../components/CategoryTabs";
 import ItemCard from "../components/ItemCard";
-import { getTrending, getListings } from "../data/store";
+import { fetchAdminItems, mergeTrending, mergeListings } from "../data/store";
 import { getItemPayments, getItemDemand, getItemRarity, parseRap } from "../data/mock";
 
 const defaultFilters = { min: 0, max: PRICE_MAX, sort: "rap-high", payment: "all", demand: "All", rarity: "All" };
@@ -16,9 +16,14 @@ const Home = () => {
   const [query, setQuery] = useState("");
   const [market, setMarket] = useState("limiteds");
   const [filters, setFilters] = useState(defaultFilters);
+  const [adminItems, setAdminItems] = useState([]);
 
-  const trendingItems = useMemo(() => getTrending(), []);
-  const listingItems = useMemo(() => getListings(), []);
+  useEffect(() => {
+    fetchAdminItems().then(setAdminItems);
+  }, []);
+
+  const trendingItems = useMemo(() => mergeTrending(adminItems), [adminItems]);
+  const listingItems = useMemo(() => mergeListings(adminItems), [adminItems]);
 
   const filterFn = (it) => {
     if (category !== "all" && it.category !== category) return false;
