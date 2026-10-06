@@ -11,6 +11,8 @@ from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
 import jwt
+import httpx
+import time
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -30,11 +32,14 @@ api_router = APIRouter(prefix="/api")
 security = HTTPBearer(auto_error=True)
 
 DEFAULT_PAYMENT_METHODS = [
-    {"id": "paypal", "label": "PayPal", "type": "paypal", "detail": "payments@adurite-demo.com", "instructions": "Send the exact total as Friends & Family, then confirm your order."},
-    {"id": "btc", "label": "Bitcoin (BTC)", "type": "crypto", "detail": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", "instructions": "Send the equivalent BTC amount to this address."},
-    {"id": "eth", "label": "Ethereum (ETH)", "type": "crypto", "detail": "0x71C7656EC7ab88b098defB751B7401B5f6d8976F", "instructions": "Send the equivalent ETH amount to this address."},
-    {"id": "ltc", "label": "Litecoin (LTC)", "type": "crypto", "detail": "LQ3Qb8t6tC8hEwTbFcq9vXp5bY6Z2w9kFm", "instructions": "Send the equivalent LTC amount to this address."},
+    {"id": "btc", "label": "Bitcoin", "coin": "BTC", "type": "crypto", "detail": "", "qr_image": "", "enabled": True},
+    {"id": "ltc", "label": "Litecoin", "coin": "LTC", "type": "crypto", "detail": "", "qr_image": "", "enabled": True},
+    {"id": "eth", "label": "Ethereum", "coin": "ETH", "type": "crypto", "detail": "", "qr_image": "", "enabled": True},
+    {"id": "paypal", "label": "PayPal", "coin": "", "type": "paypal", "detail": "", "qr_image": "", "enabled": True},
 ]
+
+COINGECKO_IDS = {"BTC": "bitcoin", "LTC": "litecoin", "ETH": "ethereum"}
+_rates_cache = {"at": 0.0, "data": None}
 
 
 # ------------------- Models -------------------
@@ -63,6 +68,8 @@ class OrderIn(BaseModel):
     roblox_username: str
     payment_method: str
     payment_detail: str = ""
+    crypto_coin: str = ""
+    crypto_amount: Optional[float] = None
 
 class Order(OrderIn):
     id: str = Field(default_factory=lambda: f"ord_{uuid.uuid4().hex[:10]}")
@@ -75,9 +82,11 @@ class OrderStatus(BaseModel):
 class PaymentMethod(BaseModel):
     id: str
     label: str
+    coin: str = ""
     type: str = "crypto"
     detail: str = ""
-    instructions: str = ""
+    qr_image: str = ""
+    enabled: bool = True
 
 class PaymentMethodsIn(BaseModel):
     methods: List[PaymentMethod]
@@ -115,7 +124,31 @@ async def list_items():
 @api_router.get("/payment-methods")
 async def public_payment_methods():
     doc = await db.settings.find_one({"key": "payment_methods"})
-    return doc["value"] if doc else DEFAULT_PAYMENT_METHODS
+    methods = doc["value"] if doc else DEFAULT_PAYMENT_METHODS
+    return [m for m in methods if m.get("enabled", True)]
+
+@api_router.get("/rates")
+async def crypto_rates():
+    now = time.time()
+    if _rates_cache["data"] and now - _rates_cache["at"] < 60:
+        return _rates_cache["data"]
+    try:
+        async with httpx.AsyncClient(timeout=8) as http:
+            r = await http.get(
+                "https://api.coingecko.com/api/v3/simple/price",
+                params={"ids": ",".join(COINGECKO_IDS.values()), "vs_currencies": "usd"},
+            )
+            r.raise_for_status()
+            raw = r.json()
+        data = {coin: raw[cg]["usd"] for coin, cg in COINGECKO_IDS.items() if cg in raw}
+        data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        _rates_cache.update({"at": now, "data": data})
+        return data
+    except Exception as e:
+        logger.warning(f"rates fetch failed: {e}")
+        if _rates_cache["data"]:
+            return _rates_cache["data"]
+        raise HTTPException(status_code=503, detail="Live rates unavailable")
 
 @api_router.post("/orders", response_model=Order)
 async def create_order(payload: OrderIn):
@@ -212,7 +245,8 @@ logger = logging.getLogger(__name__)
 @app.on_event("startup")
 async def seed():
     doc = await db.settings.find_one({"key": "payment_methods"})
-    if not doc:
+    current = doc["value"] if doc else []
+    if not doc or any("coin" not in m for m in current):
         await db.settings.update_one(
             {"key": "payment_methods"},
             {"$set": {"key": "payment_methods", "value": DEFAULT_PAYMENT_METHODS}},

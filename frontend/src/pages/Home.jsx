@@ -1,17 +1,22 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Search } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import RecentlySold from "../components/RecentlySold";
 import Sidebar, { PRICE_MAX } from "../components/Sidebar";
 import CategoryTabs from "../components/CategoryTabs";
 import ItemCard from "../components/ItemCard";
+import PurchaseModal from "../components/purchase/PurchaseModal";
 import { fetchAdminItems, mergeTrending, mergeListings } from "../data/store";
 import { getItemPayments, getItemDemand, getItemRarity, parseRap } from "../data/mock";
 
 const defaultFilters = { min: 0, max: PRICE_MAX, sort: "rap-high", payment: "all", demand: "All", rarity: "All" };
 
 const Home = () => {
+  const { id: purchaseId } = useParams();
+  const navigate = useNavigate();
+  const closePurchase = useCallback(() => navigate("/"), [navigate]);
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
   const [market, setMarket] = useState("limiteds");
@@ -108,6 +113,7 @@ const Home = () => {
         </div>
       </main>
       <Footer />
+      {purchaseId && <PurchaseModal itemId={purchaseId} onClose={closePurchase} />}
     </div>
   );
 };

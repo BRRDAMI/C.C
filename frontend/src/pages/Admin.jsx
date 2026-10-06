@@ -218,7 +218,7 @@ const OrdersManager = () => {
                 <Info k="Roblox" v={o.roblox_username} />
                 <Info k="Payment" v={o.payment_method} />
                 <Info k="Send To" v={o.payment_detail} />
-                <Info k="Total" v={money(o.total)} />
+                <Info k="Total" v={o.crypto_amount ? `${money(o.total)} · ${o.crypto_amount} ${o.crypto_coin}` : money(o.total)} />
               </div>
             </div>
           ))}
@@ -228,39 +228,68 @@ const OrdersManager = () => {
   );
 };
 
+const readFile = (f) => new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(f); });
+
 const PaymentsManager = () => {
   const [methods, setMethods] = useState([]);
   const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
   useEffect(() => { adminGetPaymentMethods().then(setMethods).catch(() => {}); }, []);
 
-  const update = (i, key, val) => setMethods(methods.map((m, idx) => (idx === i ? { ...m, [key]: val } : m)));
-  const add = () => setMethods([...methods, { id: `pm_${Date.now()}`, label: "New Method", type: "crypto", detail: "", instructions: "" }]);
-  const remove = (i) => setMethods(methods.filter((_, idx) => idx !== i));
-  const save = async () => { await savePaymentMethods(methods); setSaved(true); setTimeout(() => setSaved(false), 1500); };
+  const update = (id, patch) => setMethods((ms) => ms.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+  const save = async () => {
+    setBusy(true);
+    try { await savePaymentMethods(methods); setSaved(true); setTimeout(() => setSaved(false), 1500); }
+    finally { setBusy(false); }
+  };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-white">Receiving Accounts</h3>
-        <div className="flex gap-2">
-          <button onClick={add} className="flex items-center gap-1.5 text-sm bg-[#101014] border border-border rounded-lg px-3 h-10 text-gray-200 hover:border-primary/40"><Plus size={15} /> Add</button>
-          <button onClick={save} className="text-sm bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg px-5 h-10">{saved ? "Saved ✓" : "Save"}</button>
-        </div>
+        <button data-testid="payments-save-button" onClick={save} disabled={busy} className="text-sm bg-primary hover:bg-primary/90 disabled:opacity-60 text-white font-semibold rounded-lg px-5 h-10">{saved ? "Saved ✓" : busy ? "Saving…" : "Save"}</button>
       </div>
-      <p className="text-xs text-gray-400 mb-4">These are the accounts buyers send payment to at checkout (your PayPal email, crypto wallet addresses, etc.).</p>
-      <div className="space-y-3">
-        {methods.map((m, i) => (
-          <div key={m.id} className="rounded-xl border border-border bg-[#101014] p-4 grid md:grid-cols-[150px_120px_1fr_auto] gap-3 items-start">
-            <input value={m.label} onChange={(e) => update(i, "label", e.target.value)} className="adm-input" placeholder="Label" />
-            <select value={m.type} onChange={(e) => update(i, "type", e.target.value)} className="adm-input"><option value="crypto">Crypto</option><option value="paypal">PayPal</option><option value="other">Other</option></select>
-            <div className="space-y-2">
-              <input value={m.detail} onChange={(e) => update(i, "detail", e.target.value)} className="adm-input" placeholder="Address / email" />
-              <input value={m.instructions} onChange={(e) => update(i, "instructions", e.target.value)} className="adm-input" placeholder="Instructions (optional)" />
-            </div>
-            <button onClick={() => remove(i)} className="text-gray-400 hover:text-primary p-2"><Trash2 size={16} /></button>
+      <p className="text-xs text-gray-400 mb-4">Buyers see these at step 5 of checkout. Paste each wallet address and upload the matching QR code image from your wallet app. Toggle a method off to hide it from buyers.</p>
+      <div className="grid md:grid-cols-2 gap-4">
+        {methods.map((m) => <PaymentCard key={m.id} m={m} update={update} />)}
+      </div>
+    </div>
+  );
+};
+
+const PaymentCard = ({ m, update }) => {
+  const isCrypto = m.type === "crypto";
+  return (
+    <div data-testid={`payment-card-${m.id}`} className={`rounded-xl border bg-[#101014] p-4 ${m.enabled ? "border-border" : "border-border/50 opacity-70"}`}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-sm font-semibold text-white">{m.label}{m.coin ? ` (${m.coin})` : ""}</div>
+        <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+          <input data-testid={`payment-enabled-${m.id}`} type="checkbox" checked={m.enabled} onChange={(e) => update(m.id, { enabled: e.target.checked })} className="accent-[#e6333f] w-4 h-4" /> Enabled
+        </label>
+      </div>
+      <Field label={isCrypto ? `${m.coin} wallet address` : "PayPal email"}>
+        <input data-testid={`payment-detail-${m.id}`} value={m.detail} onChange={(e) => update(m.id, { detail: e.target.value })} className="adm-input font-mono" placeholder={isCrypto ? "Paste your address" : "you@example.com"} />
+      </Field>
+      {isCrypto && (
+        <div className="flex items-start gap-3">
+          <div data-testid={`payment-qr-preview-${m.id}`} className="w-24 h-24 shrink-0 rounded-lg bg-white flex items-center justify-center overflow-hidden">
+            {m.qr_image ? <img src={m.qr_image} alt="QR" className="w-full h-full object-contain" /> : <span className="text-[10px] text-gray-500 text-center px-2">No QR uploaded</span>}
           </div>
-        ))}
-      </div>
+          <div className="flex-1 min-w-0">
+            <label className="block text-xs text-gray-400 mb-1.5">QR code image</label>
+            <input
+              data-testid={`payment-qr-upload-${m.id}`}
+              type="file"
+              accept="image/*"
+              onChange={async (e) => { const f = e.target.files?.[0]; if (f) update(m.id, { qr_image: await readFile(f) }); e.target.value = ""; }}
+              className="block w-full text-xs text-gray-400 file:mr-3 file:rounded-md file:border-0 file:bg-primary file:text-white file:px-3 file:py-2 file:text-xs file:font-semibold"
+            />
+            {m.qr_image && (
+              <button data-testid={`payment-qr-remove-${m.id}`} type="button" onClick={() => update(m.id, { qr_image: "" })} className="mt-2 text-xs text-gray-400 hover:text-primary">Remove QR</button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

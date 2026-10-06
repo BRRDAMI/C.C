@@ -78,6 +78,14 @@ export const getPaymentMethods = async () => {
     return [];
   }
 };
+export const getRates = async () => {
+  try {
+    const { data } = await api.get("/rates");
+    return data || null;
+  } catch {
+    return null;
+  }
+};
 export const adminGetPaymentMethods = async () => {
   const { data } = await api.get("/admin/payment-methods");
   return data;
