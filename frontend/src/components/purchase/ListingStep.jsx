@@ -71,10 +71,8 @@ const ListingStep = ({ item, methods, group, setGroup, onNext }) => {
         </button>
 
         <p className="mt-6 text-center text-[12px] leading-relaxed text-gray-500">
-          Adurite.com's services are not the same, similar or equivalent to Roblox Corporation's products and services and we are
-          not sponsored by, affiliated with, approved by and/or authorized by ROBLOX Corporation whatsoever. This limited item
-          purchase is facilitated via a player to player trade to you, and is not directly from the platform or officially from the
-          site/corporation.
+          This marketplace runs independently of Roblox Corporation and carries no sponsorship, endorsement or approval from them.
+          Your purchase is completed as a player-to-player trade with another member of this site, not as a sale from the platform.
         </p>
       </div>
     </div>

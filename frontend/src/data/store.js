@@ -1,7 +1,5 @@
-// API-backed store. Base catalog (recentlySold/trending/listings) stays in mock.js;
-// admin-added items, orders and payment methods come from the backend.
+// API-backed store. The whole catalog, orders and payment methods live in the backend.
 import api from "./api";
-import { trending as mockTrending, listings as mockListings } from "./mock";
 
 const TOKEN_KEY = "adurite_token";
 
@@ -9,7 +7,7 @@ export const money = (n) =>
   "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
 
 // ---------- Items (public) ----------
-export const fetchAdminItems = async () => {
+export const fetchItems = async () => {
   try {
     const { data } = await api.get("/items");
     return data || [];
@@ -18,15 +16,8 @@ export const fetchAdminItems = async () => {
   }
 };
 
-export const mergeTrending = (adminItems = []) => [
-  ...adminItems.filter((i) => i.trending),
-  ...mockTrending,
-];
-export const mergeListings = (adminItems = []) => [...adminItems, ...mockListings];
-
 export const findItem = async (id) => {
-  const admin = await fetchAdminItems();
-  const all = [...admin, ...mockTrending, ...mockListings];
+  const all = await fetchItems();
   return all.find((i) => String(i.id) === String(id));
 };
 
@@ -51,6 +42,22 @@ export const adminDeleteItem = async (id) => {
 export const createOrder = async (order) => {
   const { data } = await api.post("/orders", order);
   return data;
+};
+export const ORDER_STATUSES = [
+  { id: "awaiting_payment", label: "Awaiting payment" },
+  { id: "confirmed", label: "Confirmed" },
+  { id: "delivered", label: "Delivered" },
+  { id: "cancelled", label: "Cancelled" },
+];
+export const statusLabel = (id) => ORDER_STATUSES.find((s) => s.id === id)?.label || id;
+
+export const getOrder = async (id) => {
+  try {
+    const { data } = await api.get(`/orders/${id}`);
+    return data;
+  } catch {
+    return null;
+  }
 };
 export const getOrders = async () => {
   try {

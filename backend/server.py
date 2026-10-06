@@ -57,6 +57,7 @@ class ItemIn(BaseModel):
     price: float
     image: str = ""
     trending: bool = True
+    visible: bool = True
 
 class Item(ItemIn):
     id: str = Field(default_factory=lambda: f"adm_{uuid.uuid4().hex[:10]}")
@@ -76,7 +77,7 @@ class OrderIn(BaseModel):
 
 class Order(OrderIn):
     id: str = Field(default_factory=lambda: f"ord_{uuid.uuid4().hex[:10]}")
-    status: str = "pending"
+    status: str = "awaiting_payment"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class OrderStatus(BaseModel):
@@ -121,7 +122,7 @@ async def root():
 
 @api_router.get("/items")
 async def list_items():
-    items = await db.items.find().sort("created_at", -1).to_list(1000)
+    items = await db.items.find({"visible": {"$ne": False}}).sort("created_at", -1).to_list(1000)
     return [clean(i) for i in items]
 
 @api_router.get("/payment-methods")
@@ -163,6 +164,13 @@ async def create_order(payload: OrderIn):
 async def list_orders():
     orders = await db.orders.find().sort("created_at", -1).to_list(500)
     return [clean(o) for o in orders]
+
+@api_router.get("/orders/{order_id}")
+async def get_order(order_id: str):
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return clean(order)
 
 
 # ------------------- Admin routes -------------------
@@ -242,8 +250,30 @@ app.add_middleware(
 )
 
 
+async def seed_catalog():
+    flag = await db.settings.find_one({"key": "catalog_seeded"})
+    if flag:
+        return
+    path = ROOT_DIR / "catalog_seed.json"
+    if path.exists():
+        import json
+        rows = json.loads(path.read_text())
+        for r in rows:
+            if await db.items.find_one({"id": r["id"]}):
+                continue
+            item = Item(**r)
+            doc = item.dict()
+            doc["id"] = r["id"]
+            await db.items.insert_one(doc)
+    await db.settings.update_one(
+        {"key": "catalog_seeded"}, {"$set": {"key": "catalog_seeded", "value": True}}, upsert=True
+    )
+    logger.info("catalog seeded")
+
+
 @app.on_event("startup")
 async def seed():
+    await seed_catalog()
     doc = await db.settings.find_one({"key": "payment_methods"})
     current = doc["value"] if doc else []
     if not doc or any("coin" not in m for m in current):

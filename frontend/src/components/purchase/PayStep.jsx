@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { QrCode } from "lucide-react";
 import { useCurrency } from "../../context/CurrencyContext";
 import { fmtAmount } from "./MethodStep";
+import StatusTracker from "./StatusTracker";
+import { getOrder, statusLabel } from "../../data/store";
 
 const splitPrice = (s) => {
   const m = s.match(/^(.*?)(\.\d+)?$/);
@@ -11,9 +13,21 @@ const splitPrice = (s) => {
 const PayStep = ({ item, username, method, order, rates, onBack }) => {
   const { format } = useCurrency();
   const [copied, setCopied] = useState(false);
+  const [status, setStatus] = useState(order?.status || "awaiting_payment");
   const isCrypto = method.type === "crypto";
   const amount = isCrypto ? fmtAmount(item.price, method.coin, rates) : null;
   const [whole, cents] = splitPrice(format(item.price));
+
+  useEffect(() => {
+    if (!order?.id) return;
+    setStatus(order.status || "awaiting_payment");
+    const tick = async () => {
+      const fresh = await getOrder(order.id);
+      if (fresh?.status) setStatus(fresh.status);
+    };
+    const t = setInterval(tick, 8000);
+    return () => clearInterval(t);
+  }, [order?.id, order?.status]);
 
   const copy = () => {
     navigator.clipboard?.writeText(method.detail);
@@ -87,8 +101,12 @@ const PayStep = ({ item, username, method, order, rates, onBack }) => {
       </p>
 
       {order && (
-        <div data-testid="pay-order-id" className="mt-3 text-xs text-gray-500">
-          Order <span className="font-mono text-gray-400">{order.id}</span> · pending payment
+        <div className="mt-8 w-full flex flex-col items-center gap-3">
+          <StatusTracker status={status} />
+          <div data-testid="pay-order-id" className="text-xs text-gray-500">
+            Order <span className="font-mono text-gray-400">{order.id}</span> ·{" "}
+            <span data-testid="pay-order-status" className="text-gray-300">{statusLabel(status)}</span>
+          </div>
         </div>
       )}
 

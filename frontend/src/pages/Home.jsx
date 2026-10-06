@@ -8,7 +8,7 @@ import Sidebar, { PRICE_MAX } from "../components/Sidebar";
 import CategoryTabs from "../components/CategoryTabs";
 import ItemCard from "../components/ItemCard";
 import PurchaseModal from "../components/purchase/PurchaseModal";
-import { fetchAdminItems, mergeTrending, mergeListings } from "../data/store";
+import { fetchItems } from "../data/store";
 import { getItemPayments, getItemDemand, getItemRarity, parseRap } from "../data/mock";
 
 const defaultFilters = { min: 0, max: PRICE_MAX, sort: "rap-high", payment: "all", demand: "All", rarity: "All" };
@@ -21,16 +21,22 @@ const Home = () => {
   const [query, setQuery] = useState("");
   const [market, setMarket] = useState("limiteds");
   const [filters, setFilters] = useState(defaultFilters);
-  const [adminItems, setAdminItems] = useState([]);
+  const [items, setItems] = useState([]);
 
   useEffect(() => {
-    fetchAdminItems().then(setAdminItems);
+    fetchItems().then(setItems);
   }, []);
 
-  const trendingItems = useMemo(() => mergeTrending(adminItems), [adminItems]);
-  const listingItems = useMemo(() => mergeListings(adminItems), [adminItems]);
+  const rate = (it) => it.price / (parseRap(it.rap) || 1);
+  const sortFns = useMemo(() => ({
+    "rap-high": (a, b) => parseRap(b.rap) - parseRap(a.rap),
+    "rap-low": (a, b) => parseRap(a.rap) - parseRap(b.rap),
+    "price-high": (a, b) => b.price - a.price,
+    "price-low": (a, b) => a.price - b.price,
+    "rate-low": (a, b) => rate(a) - rate(b),
+  }), []);
 
-  const filterFn = (it) => {
+  const filterFn = useCallback((it) => {
     if (category !== "all" && it.category !== category) return false;
     if (query && !it.name.toLowerCase().includes(query.toLowerCase())) return false;
     if (it.price < filters.min) return false;
@@ -39,20 +45,18 @@ const Home = () => {
     if (filters.demand !== "All" && getItemDemand(it) !== filters.demand) return false;
     if (filters.rarity !== "All" && getItemRarity(it) !== filters.rarity) return false;
     return true;
-  };
+  }, [category, query, filters]);
 
-  const rate = (it) => it.price / (parseRap(it.rap) || 1);
-  const sortFns = {
-    "rap-high": (a, b) => parseRap(b.rap) - parseRap(a.rap),
-    "rap-low": (a, b) => parseRap(a.rap) - parseRap(b.rap),
-    "price-high": (a, b) => b.price - a.price,
-    "price-low": (a, b) => a.price - b.price,
-    "rate-low": (a, b) => rate(a) - rate(b),
-  };
   const sortFn = sortFns[filters.sort] || sortFns["rap-high"];
 
-  const filteredTrending = trendingItems.filter(filterFn).sort(sortFn);
-  const filteredListings = listingItems.filter(filterFn).sort(sortFn);
+  const filteredListings = useMemo(
+    () => items.filter(filterFn).slice().sort(sortFn),
+    [items, filterFn, sortFn]
+  );
+  const filteredTrending = useMemo(
+    () => items.filter((i) => i.trending).filter(filterFn).slice().sort(sortFn),
+    [items, filterFn, sortFn]
+  );
 
   return (
     <div className="min-h-screen bg-background">

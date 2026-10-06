@@ -121,7 +121,7 @@ export const paymentOptions = [
   { id: "all", label: "All" },
   { id: "paypal", label: "Paypal" },
   { id: "card", label: "Card" },
-  { id: "apple", label: "Apple Pay" },
+  { id: "crypto", label: "Crypto" },
 ];
 
 export const tagOptions = ["All", "Admin", "Particles", "Dress to Impress"];
@@ -166,9 +166,8 @@ export const getItemDemand = (item) => {
 
 export const getItemPayments = (item) => {
   if (item.payments && item.payments.length) return item.payments;
-  const p = ["paypal"];
+  const p = ["paypal", "crypto"];
   if (item.price <= 20000) p.push("card");
-  if (item.price <= 2000) p.push("apple");
   return p;
 };
 

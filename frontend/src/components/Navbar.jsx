@@ -119,7 +119,7 @@ const Navbar = () => {
           <span>Our customers say</span>
           <span className="flex gap-[3px]">
             {[0, 1, 2, 3, 4].map((i) => (
-              <span key={i} className="bg-[#7a3236] w-6 h-6 flex items-center justify-center rounded-[2px]">
+              <span key={i} className="bg-[#f05a63] w-6 h-6 flex items-center justify-center rounded-[2px] shadow-[0_0_8px_rgba(240,90,99,0.45)]">
                 <Star size={16} className="fill-white text-white" strokeWidth={0} />
               </span>
             ))}

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { PackageSearch } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { getOrders } from "../data/store";
+import { getOrders, statusLabel } from "../data/store";
 import { useCurrency } from "../context/CurrencyContext";
 
 const Orders = () => {
@@ -35,7 +35,7 @@ const Orders = () => {
                 </div>
                 <div className="text-right">
                   <div className="text-primary font-bold">{format(o.total)}</div>
-                  <span className="text-xs font-semibold text-yellow-400 capitalize">{o.status}</span>
+                  <span data-testid={`order-status-${o.id}`} className={`text-xs font-semibold ${o.status === "delivered" ? "text-[#00b67a]" : o.status === "cancelled" ? "text-primary" : "text-yellow-400"}`}>{statusLabel(o.status)}</span>
                 </div>
               </div>
             ))}

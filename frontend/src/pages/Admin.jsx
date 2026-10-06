@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  LogOut, Plus, Trash2, Package, ShoppingBag, CreditCard, Pencil, X, Loader2,
+  LogOut, Plus, Trash2, Package, ShoppingBag, CreditCard, Pencil, X, Loader2, Eye, EyeOff,
 } from "lucide-react";
 import {
   login, logout, verifyAdmin, money,
   adminGetItems, adminCreateItem, adminUpdateItem, adminDeleteItem,
   adminGetOrders, adminUpdateOrderStatus,
   adminGetPaymentMethods, savePaymentMethods,
+  ORDER_STATUSES, statusLabel,
 } from "../data/store";
 import { categories } from "../data/mock";
 
-const emptyItem = { name: "", category: "hat", rap: "", price: "", image: "", trending: true };
+const emptyItem = { name: "", category: "hat", rap: "", price: "", image: "", trending: true, visible: true };
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -103,6 +104,8 @@ const ItemsManager = () => {
   const [form, setForm] = useState(emptyItem);
   const [editing, setEditing] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [q, setQ] = useState("");
+  const [confirmId, setConfirmId] = useState("");
 
   const refresh = () => adminGetItems().then(setItems).catch(() => {});
   useEffect(() => { refresh(); }, []);
@@ -118,8 +121,14 @@ const ItemsManager = () => {
       setForm(emptyItem); setEditing(null); await refresh();
     } finally { setBusy(false); }
   };
-  const edit = (it) => { setForm({ ...it, price: String(it.price) }); setEditing(it.id); window.scrollTo({ top: 0, behavior: "smooth" }); };
-  const remove = async (id) => { await adminDeleteItem(id); refresh(); };
+  const edit = (it) => { setForm({ ...it, price: String(it.price), visible: it.visible !== false }); setEditing(it.id); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const remove = async (id) => { await adminDeleteItem(id); setConfirmId(""); refresh(); };
+  const toggleVisible = async (it) => {
+    await adminUpdateItem(it.id, { ...it, visible: it.visible === false });
+    refresh();
+  };
+
+  const shown = items.filter((it) => it.name.toLowerCase().includes(q.trim().toLowerCase()));
 
   return (
     <div className="grid lg:grid-cols-[360px_1fr] gap-8">
@@ -150,8 +159,11 @@ const ItemsManager = () => {
           }} className="block w-full text-xs text-gray-400 file:mr-3 file:rounded-md file:border-0 file:bg-primary file:text-white file:px-3 file:py-2 file:text-xs file:font-semibold" />
         </div>
         {form.image && <img src={form.image} alt="preview" className="w-20 h-20 object-contain mb-3 rounded-lg border border-border bg-[#0b0b0e]" onError={(e) => { e.target.style.opacity = 0.25; }} />}
+        <label className="flex items-center gap-2 text-sm text-gray-300 mb-2">
+          <input data-testid="item-trending-checkbox" type="checkbox" checked={form.trending} onChange={(e) => setForm({ ...form, trending: e.target.checked })} className="accent-[#e6333f]" /> Show in Trending
+        </label>
         <label className="flex items-center gap-2 text-sm text-gray-300 mb-4">
-          <input type="checkbox" checked={form.trending} onChange={(e) => setForm({ ...form, trending: e.target.checked })} className="accent-[#e6333f]" /> Show in Trending
+          <input data-testid="item-visible-checkbox" type="checkbox" checked={form.visible !== false} onChange={(e) => setForm({ ...form, visible: e.target.checked })} className="accent-[#e6333f]" /> Visible in store
         </label>
         <button disabled={busy} className="w-full bg-primary hover:bg-primary/90 disabled:opacity-60 text-white font-semibold rounded-lg h-11 flex items-center justify-center gap-2">
           <Plus size={16} /> {busy ? "Saving…" : editing ? "Save Changes" : "Add Item"}
@@ -159,21 +171,44 @@ const ItemsManager = () => {
       </form>
 
       <div>
-        <h3 className="font-semibold text-white mb-4">Your Items ({items.length})</h3>
-        {items.length === 0 ? (
-          <div className="text-gray-500 text-sm rounded-xl border border-dashed border-border p-10 text-center">No items yet. Add one on the left — it appears on the homepage instantly.</div>
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <h3 className="font-semibold text-white">Catalog ({shown.length}{q ? ` of ${items.length}` : ""})</h3>
+          <input
+            data-testid="item-search-input"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search catalog…"
+            className="adm-input !w-[220px] !h-10"
+          />
+        </div>
+        {shown.length === 0 ? (
+          <div className="text-gray-500 text-sm rounded-xl border border-dashed border-border p-10 text-center">{items.length === 0 ? "No items yet. Add one on the left — it appears on the homepage instantly." : "No items match your search."}</div>
         ) : (
           <div className="space-y-3">
-            {items.map((it) => (
-              <div key={it.id} className="flex items-center gap-4 rounded-xl border border-border bg-[#101014] p-3">
+            {shown.map((it) => (
+              <div data-testid={`admin-item-row-${it.id}`} key={it.id} className={`flex items-center gap-4 rounded-xl border border-border bg-[#101014] p-3 ${it.visible === false ? "opacity-60" : ""}`}>
                 <img src={it.image} alt={it.name} className="w-14 h-14 object-contain rounded-lg bg-[#0b0b0e]" onError={(e) => { e.target.style.opacity = 0.25; }} />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold text-white truncate">{it.name}</div>
-                  <div className="text-xs text-gray-500 capitalize">{it.category} · RAP {it.rap || "—"} {it.trending && <span className="text-primary">· Trending</span>}</div>
+                  <div className="text-xs text-gray-500 capitalize">
+                    {it.category} · RAP {it.rap || "—"}
+                    {it.trending && <span className="text-primary"> · Trending</span>}
+                    {it.visible === false && <span className="text-yellow-500"> · Hidden</span>}
+                  </div>
                 </div>
                 <div className="text-primary font-bold">{money(it.price)}</div>
-                <button onClick={() => edit(it)} className="text-gray-400 hover:text-white p-2"><Pencil size={16} /></button>
-                <button onClick={() => remove(it.id)} className="text-gray-400 hover:text-primary p-2"><Trash2 size={16} /></button>
+                <button data-testid={`item-visible-toggle-${it.id}`} onClick={() => toggleVisible(it)} title={it.visible === false ? "Show in store" : "Hide from store"} className="text-gray-400 hover:text-white p-2">
+                  {it.visible === false ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+                <button data-testid={`item-edit-button-${it.id}`} onClick={() => edit(it)} className="text-gray-400 hover:text-white p-2"><Pencil size={16} /></button>
+                {confirmId === it.id ? (
+                  <div className="flex items-center gap-1">
+                    <button data-testid={`item-delete-confirm-${it.id}`} onClick={() => remove(it.id)} className="text-xs font-semibold bg-primary text-white rounded-md px-2 h-8">Delete</button>
+                    <button onClick={() => setConfirmId("")} className="text-xs text-gray-400 px-1">Cancel</button>
+                  </div>
+                ) : (
+                  <button data-testid={`item-delete-button-${it.id}`} onClick={() => setConfirmId(it.id)} className="text-gray-400 hover:text-primary p-2"><Trash2 size={16} /></button>
+                )}
               </div>
             ))}
           </div>
@@ -182,8 +217,6 @@ const ItemsManager = () => {
     </div>
   );
 };
-
-const STATUSES = ["pending", "completed", "cancelled"];
 
 const OrdersManager = () => {
   const [orders, setOrders] = useState([]);
@@ -210,8 +243,8 @@ const OrdersManager = () => {
                   <div className="text-sm font-semibold text-white truncate">{o.item_name}</div>
                   <div className="text-xs text-gray-500">{o.id} · {new Date(o.created_at).toLocaleString()}</div>
                 </div>
-                <select value={o.status} onChange={(e) => setStatus(o.id, e.target.value)} className="adm-input !w-auto !h-9 capitalize">
-                  {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                <select data-testid={`order-status-select-${o.id}`} value={o.status} onChange={(e) => setStatus(o.id, e.target.value)} className="adm-input !w-auto !h-9">
+                  {ORDER_STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
                 </select>
               </div>
               <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
