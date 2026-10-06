@@ -14,7 +14,7 @@ const ListingStep = ({ item, methods, group, setGroup, onNext }) => {
   const hasCrypto = methods.some((m) => m.type === "crypto");
   const hasPaypal = methods.some((m) => m.type === "paypal");
   const isAvailable = (g) => g.available && (g.id === "crypto" ? hasCrypto : g.id === "paypal" ? hasPaypal : false);
-  const listingCount = methods.length;
+  const listingCount = item.listings != null ? item.listings : methods.length;
 
   return (
     <div data-testid="listing-step" className="flex flex-col items-center">

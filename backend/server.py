@@ -56,6 +56,7 @@ class ItemIn(BaseModel):
     rap: str = ""
     price: float
     price_paypal: Optional[float] = None
+    listings: Optional[int] = None
     image: str = ""
     trending: bool = True
     visible: bool = True

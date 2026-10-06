@@ -12,7 +12,7 @@ import {
 } from "../data/store";
 import { categories } from "../data/mock";
 
-const emptyItem = { name: "", category: "hat", rap: "", price: "", price_paypal: "", image: "", trending: true, visible: true };
+const emptyItem = { name: "", category: "hat", rap: "", price: "", price_paypal: "", listings: "", image: "", trending: true, visible: true };
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -118,6 +118,7 @@ const ItemsManager = () => {
       ...form,
       price: parseFloat(form.price),
       price_paypal: form.price_paypal === "" || form.price_paypal == null ? null : parseFloat(form.price_paypal),
+      listings: form.listings === "" || form.listings == null ? null : parseInt(form.listings, 10),
     };
     try {
       if (editing) await adminUpdateItem(editing, payload);
@@ -130,6 +131,7 @@ const ItemsManager = () => {
       ...it,
       price: String(it.price),
       price_paypal: it.price_paypal == null ? "" : String(it.price_paypal),
+      listings: it.listings == null ? "" : String(it.listings),
       visible: it.visible !== false,
     });
     setEditing(it.id);
