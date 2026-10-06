@@ -10,13 +10,13 @@ const splitPrice = (s) => {
   return [m?.[1] ?? s, m?.[2] ?? ""];
 };
 
-const PayStep = ({ item, username, method, order, rates, onBack }) => {
+const PayStep = ({ item, price, username, method, order, rates, onBack }) => {
   const { format } = useCurrency();
   const [copied, setCopied] = useState(false);
   const [status, setStatus] = useState(order?.status || "awaiting_payment");
   const isCrypto = method.type === "crypto";
-  const amount = isCrypto ? fmtAmount(item.price, method.coin, rates) : null;
-  const [whole, cents] = splitPrice(format(item.price));
+  const amount = isCrypto ? fmtAmount(price, method.coin, rates) : null;
+  const [whole, cents] = splitPrice(format(price));
 
   useEffect(() => {
     if (!order?.id) return;

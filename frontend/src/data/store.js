@@ -16,6 +16,12 @@ export const fetchItems = async () => {
   }
 };
 
+// PayPal listings can carry their own price; crypto/balance uses the base price.
+export const priceFor = (item, group) =>
+  group === "paypal" && item?.price_paypal != null && item.price_paypal !== ""
+    ? Number(item.price_paypal)
+    : Number(item?.price || 0);
+
 export const findItem = async (id) => {
   const all = await fetchItems();
   return all.find((i) => String(i.id) === String(id));

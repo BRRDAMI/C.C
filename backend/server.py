@@ -55,6 +55,7 @@ class ItemIn(BaseModel):
     category: str = "hat"
     rap: str = ""
     price: float
+    price_paypal: Optional[float] = None
     image: str = ""
     trending: bool = True
     visible: bool = True

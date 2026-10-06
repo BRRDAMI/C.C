@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useCurrency } from "../../context/CurrencyContext";
 
-const ReviewStep = ({ item, username, method, onBack, onConfirm, submitting, error }) => {
+const ReviewStep = ({ item, price, username, method, onBack, onConfirm, submitting, error }) => {
   const { format } = useCurrency();
   const [agree, setAgree] = useState(false);
 
@@ -17,7 +17,7 @@ const ReviewStep = ({ item, username, method, onBack, onConfirm, submitting, err
             <div className="text-white font-semibold text-[15px] truncate">{item.name}</div>
             <div className="text-gray-400 text-sm">RAP: {item.rap || "—"}</div>
           </div>
-          <div data-testid="review-total" className="text-white font-bold text-xl">{format(item.price)}</div>
+          <div data-testid="review-total" className="text-white font-bold text-xl">{format(price)}</div>
         </div>
         <div className="divide-y divide-border text-sm">
           <Row k="Buyer" v={username} testid="review-buyer" />

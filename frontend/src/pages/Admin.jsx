@@ -12,7 +12,7 @@ import {
 } from "../data/store";
 import { categories } from "../data/mock";
 
-const emptyItem = { name: "", category: "hat", rap: "", price: "", image: "", trending: true, visible: true };
+const emptyItem = { name: "", category: "hat", rap: "", price: "", price_paypal: "", image: "", trending: true, visible: true };
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -114,14 +114,27 @@ const ItemsManager = () => {
     e.preventDefault();
     if (!form.name || form.price === "") return;
     setBusy(true);
-    const payload = { ...form, price: parseFloat(form.price) };
+    const payload = {
+      ...form,
+      price: parseFloat(form.price),
+      price_paypal: form.price_paypal === "" || form.price_paypal == null ? null : parseFloat(form.price_paypal),
+    };
     try {
       if (editing) await adminUpdateItem(editing, payload);
       else await adminCreateItem(payload);
       setForm(emptyItem); setEditing(null); await refresh();
     } finally { setBusy(false); }
   };
-  const edit = (it) => { setForm({ ...it, price: String(it.price), visible: it.visible !== false }); setEditing(it.id); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const edit = (it) => {
+    setForm({
+      ...it,
+      price: String(it.price),
+      price_paypal: it.price_paypal == null ? "" : String(it.price_paypal),
+      visible: it.visible !== false,
+    });
+    setEditing(it.id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
   const remove = async (id) => { await adminDeleteItem(id); setConfirmId(""); refresh(); };
   const toggleVisible = async (it) => {
     await adminUpdateItem(it.id, { ...it, visible: it.visible === false });
@@ -144,9 +157,12 @@ const ItemsManager = () => {
           </select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Price (USD)"><input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="adm-input" placeholder="0.00" /></Field>
+          <Field label="Crypto price (USD)"><input data-testid="item-price-input" type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="adm-input" placeholder="0.00" /></Field>
           <Field label="RAP"><input value={form.rap} onChange={(e) => setForm({ ...form, rap: e.target.value })} className="adm-input" placeholder="e.g. 120K" /></Field>
         </div>
+        <Field label="PayPal price (USD) — optional">
+          <input data-testid="item-paypal-price-input" type="number" step="0.01" value={form.price_paypal ?? ""} onChange={(e) => setForm({ ...form, price_paypal: e.target.value })} className="adm-input" placeholder="Leave empty to use the crypto price" />
+        </Field>
         <Field label="Image URL"><input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} className="adm-input" placeholder="https://..." /></Field>
         <div className="mb-3">
           <label className="block text-xs text-gray-400 mb-1.5">Or upload image</label>
@@ -196,7 +212,10 @@ const ItemsManager = () => {
                     {it.visible === false && <span className="text-yellow-500"> · Hidden</span>}
                   </div>
                 </div>
-                <div className="text-primary font-bold">{money(it.price)}</div>
+                <div className="text-right shrink-0">
+                  <div className="text-primary font-bold">{money(it.price)}</div>
+                  {it.price_paypal != null && <div data-testid={`item-paypal-price-${it.id}`} className="text-[11px] text-gray-400">PayPal {money(it.price_paypal)}</div>}
+                </div>
                 <button data-testid={`item-visible-toggle-${it.id}`} onClick={() => toggleVisible(it)} title={it.visible === false ? "Show in store" : "Hide from store"} className="text-gray-400 hover:text-white p-2">
                   {it.visible === false ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>

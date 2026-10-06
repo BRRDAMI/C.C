@@ -7,7 +7,7 @@ import AccountStep from "./AccountStep";
 import MethodStep from "./MethodStep";
 import ReviewStep from "./ReviewStep";
 import PayStep from "./PayStep";
-import { findItem, getPaymentMethods, getRates, createOrder } from "../../data/store";
+import { findItem, getPaymentMethods, getRates, createOrder, priceFor } from "../../data/store";
 import { fmtAmount } from "./MethodStep";
 
 const PurchaseModal = ({ itemId, onClose }) => {
@@ -48,6 +48,7 @@ const PurchaseModal = ({ itemId, onClose }) => {
   }, [onClose]);
 
   const method = methods.find((m) => m.id === selected);
+  const price = item ? priceFor(item, group) : 0;
 
   const goMethod = () => {
     const opts = methods.filter((m) => (group === "paypal" ? m.type === "paypal" : m.type === "crypto"));
@@ -63,12 +64,12 @@ const PurchaseModal = ({ itemId, onClose }) => {
         item_id: String(item.id),
         item_name: item.name,
         item_image: item.image,
-        total: item.price,
+        total: price,
         roblox_username: username.trim(),
         payment_method: method.type === "crypto" ? `${method.label} (${method.coin})` : method.label,
         payment_detail: method.detail,
         crypto_coin: method.coin || "",
-        crypto_amount: method.type === "crypto" ? Number(fmtAmount(item.price, method.coin, rates)) || null : null,
+        crypto_amount: method.type === "crypto" ? Number(fmtAmount(price, method.coin, rates)) || null : null,
       });
       setOrder(o);
       setStep(5);
@@ -113,13 +114,13 @@ const PurchaseModal = ({ itemId, onClose }) => {
             <AccountStep username={username} setUsername={setUsername} onBack={() => setStep(1)} onNext={goMethod} />
           )}
           {item && step === 3 && (
-            <MethodStep item={item} methods={methods} group={group} selected={selected} setSelected={setSelected} rates={rates} onBack={() => setStep(2)} onNext={() => setStep(4)} />
+            <MethodStep item={item} price={price} methods={methods} group={group} selected={selected} setSelected={setSelected} rates={rates} onBack={() => setStep(2)} onNext={() => setStep(4)} />
           )}
           {item && step === 4 && method && (
-            <ReviewStep item={item} username={username.trim()} method={method} onBack={() => setStep(3)} onConfirm={confirm} submitting={submitting} error={error} />
+            <ReviewStep item={item} price={price} username={username.trim()} method={method} onBack={() => setStep(3)} onConfirm={confirm} submitting={submitting} error={error} />
           )}
           {item && step === 5 && method && (
-            <PayStep item={item} username={username.trim()} method={method} order={order} rates={rates} onBack={onClose} />
+            <PayStep item={item} price={price} username={username.trim()} method={method} order={order} rates={rates} onBack={onClose} />
           )}
         </div>
       </div>

@@ -1,6 +1,7 @@
 import React from "react";
 import { Zap } from "lucide-react";
 import { useCurrency } from "../../context/CurrencyContext";
+import { priceFor } from "../../data/store";
 
 export const GROUPS = [
   { id: "card", label: "Card / Apple Pay", available: false },
@@ -50,7 +51,7 @@ const ListingStep = ({ item, methods, group, setGroup, onNext }) => {
                 {ok ? (
                   <span className="text-right">
                     <span className="text-gray-400 text-xs mr-1.5">From</span>
-                    <span className="text-white font-semibold text-[15px]">{format(item.price)}</span>
+                    <span className="text-white font-semibold text-[15px]">{format(priceFor(item, g.id))}</span>
                     <span className="text-gray-500 text-[11px] ml-1">{code}</span>
                   </span>
                 ) : (

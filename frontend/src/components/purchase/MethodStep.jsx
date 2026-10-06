@@ -9,7 +9,7 @@ const fmtAmount = (usd, coin, rates) => {
   return (usd / rate).toFixed(dec);
 };
 
-const MethodStep = ({ item, methods, group, selected, setSelected, rates, onBack, onNext }) => {
+const MethodStep = ({ item, price, methods, group, selected, setSelected, rates, onBack, onNext }) => {
   const { format } = useCurrency();
   const options = methods.filter((m) => (group === "paypal" ? m.type === "paypal" : m.type === "crypto"));
 
@@ -23,7 +23,7 @@ const MethodStep = ({ item, methods, group, selected, setSelected, rates, onBack
       <div className="w-full mt-8 space-y-2.5">
         {options.map((m) => {
           const active = selected === m.id;
-          const amt = m.type === "crypto" ? fmtAmount(item.price, m.coin, rates) : null;
+          const amt = m.type === "crypto" ? fmtAmount(price, m.coin, rates) : null;
           return (
             <button
               key={m.id}
@@ -39,7 +39,7 @@ const MethodStep = ({ item, methods, group, selected, setSelected, rates, onBack
                 <div className="text-gray-500 text-xs">{m.type === "paypal" ? "Friends & Family" : "Network confirmations required"}</div>
               </div>
               <div className="text-right">
-                <div className="text-white font-semibold">{format(item.price)}</div>
+                <div className="text-white font-semibold">{format(price)}</div>
                 {m.type === "crypto" && (
                   <div className="text-gray-400 text-xs">{amt ? `≈ ${amt} ${m.coin}` : "Live rate at checkout"}</div>
                 )}
